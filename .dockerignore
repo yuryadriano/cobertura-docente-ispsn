@@ -1,0 +1,9 @@
+.git
+.gitignore
+.agents
+.gemini
+*.log
+scratch/
+00_Documentos/
+.vscode/
+.idea/
