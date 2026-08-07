@@ -108,7 +108,7 @@ window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
                         <th style="padding:10px 8px; font-size:11px; min-width:110px;">Regime</th>
                         <th style="padding:10px 8px; font-size:11px;">Parecer</th>
                         <th style="padding:10px 8px; font-size:11px; width:110px;">Replicar</th>
-                        <th style="padding:10px 8px; font-size:11px; min-width:170px; color:#1E8449; font-weight:700;">Aprovação / Decisão</th>
+                        <th style="padding:10px 8px; font-size:11px; min-width:160px;">Aprovação</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-linhas">

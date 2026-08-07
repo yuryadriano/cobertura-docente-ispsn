@@ -103,11 +103,19 @@ if (isset($_GET['role']) && Auth::check()) {
     $stmt = $db->prepare("SELECT * FROM utilizadores WHERE perfil = ? AND activo = 1 LIMIT 1");
     $stmt->execute([$targetRole]);
     $usrRole = $stmt->fetch();
-    if ($usrRole) {
-        // Limpar flags de bypass de super admin para testar as permissões reais do perfil selecionado
-        unset($_SESSION['super_admin_logged_in'], $_SESSION['master_admin_session'], $_SESSION['is_super_admin']);
-        Auth::login($usrRole, true);
+    if (!$usrRole) {
+        $currUser = Auth::user();
+        $usrRole = [
+            'id'       => $currUser['id'] ?? 1,
+            'nome'     => $currUser['nome'] ?? 'Utilizador ISPSN',
+            'email'    => $currUser['email'] ?? 'admin.ti@ispsn.org',
+            'perfil'   => $targetRole,
+            'curso_id' => $currUser['curso_id'] ?? 1
+        ];
     }
+    // Limpar flags de bypass de super admin para testar as permissões reais do perfil selecionado
+    unset($_SESSION['super_admin_logged_in'], $_SESSION['master_admin_session'], $_SESSION['is_super_admin']);
+    Auth::login($usrRole, true);
 }
 
 // 3. Processar Requisições de API REST (JSON)

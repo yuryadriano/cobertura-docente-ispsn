@@ -325,15 +325,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const decVal = l.decisao_aprovacao || 'Aprovar';
                 const decSelOptions = [
                     'Aprovar',
-                    'Manter c/ acompanhamento',
-                    'Aprovar c/ condição',
+                    'Recusar',
                     'Solicitar substituição'
                 ];
                 const decSel = decSelOptions.map(o => 
                     `<option value="${o}" ${o === decVal ? 'selected' : ''}>${o}</option>`
                 ).join('');
 
-                const decColor = decVal === 'Aprovar' ? '#166534' : (decVal === 'Solicitar substituição' ? '#C0392B' : '#B45309');
+                const decColor = decVal === 'Aprovar' ? '#166534' : '#C0392B';
 
                 const btnReplicar = (l.docente_id && !isLocked) 
                     ? `<button class="btn sm ghost" title="Atribuir a esta disciplina em todas as turmas do ano" onclick="window.applyAllTurmas(${l.plano_id}, ${l.disciplina_id}, ${l.docente_id})">↳ todas as turmas</button>` 
