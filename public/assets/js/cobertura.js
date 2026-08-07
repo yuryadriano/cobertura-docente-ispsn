@@ -210,13 +210,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnSubmeter.style.display = (isCoordOrAdmin && ['Rascunho', 'Devolvido', 'Em Elaboração'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
             if (btnAprovarDepto) {
-                btnAprovarDepto.style.display = (isChefeDeptoOrAdmin && planoData.estado === 'Submetido') ? 'inline-block' : 'none';
+                btnAprovarDepto.style.display = (isChefeDeptoOrAdmin && ['Submetido', 'Rascunho', 'Em Elaboração'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
             if (btnValidarPR) {
-                btnValidarPR.style.display = (isPresidenteOrAdmin && planoData.estado === 'Aprovado pelo Departamento') ? 'inline-block' : 'none';
+                btnValidarPR.style.display = (isPresidenteOrAdmin && ['Submetido', 'Aprovado pelo Departamento', 'Aprovado'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
             if (btnDevolver) {
-                btnDevolver.style.display = ((isChefeDeptoOrAdmin && planoData.estado === 'Submetido') || (isPresidenteOrAdmin && planoData.estado === 'Aprovado pelo Departamento')) ? 'inline-block' : 'none';
+                btnDevolver.style.display = ((isChefeDeptoOrAdmin || isPresidenteOrAdmin) && ['Submetido', 'Aprovado pelo Departamento'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
 
             const bannerDev = document.getElementById('banner-devolucao');

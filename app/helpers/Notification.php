@@ -10,6 +10,20 @@ if (session_status() === PHP_SESSION_NONE) {
 
 class Notification {
     
+    public static function add(int $planoId, string $estado, ?string $mensagem = null): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['system_notifications'] = $_SESSION['system_notifications'] ?? [];
+        array_unshift($_SESSION['system_notifications'], [
+            'plano_id'    => $planoId,
+            'novo_estado' => $estado,
+            'observacoes' => $mensagem,
+            'timestamp'   => date('Y-m-d H:i:s')
+        ]);
+        $_SESSION['system_notifications'] = array_slice($_SESSION['system_notifications'], 0, 10);
+    }
+    
     /**
      * Processa e regista uma notificação de mudança de estado do plano de cobertura
      */
