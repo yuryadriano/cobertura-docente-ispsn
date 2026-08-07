@@ -224,8 +224,9 @@ switch ($page) {
     case 'config':
         $title = 'Portal ISPSN · Configurações do Sistema';
         $db = Database::getInstance();
-        // Limpar utilizadores de teste fictícios da base de dados
+        // Limpar utilizadores de teste fictícios da base de dados e assegurar conta do Super Admin David Boio
         $db->exec("DELETE FROM utilizadores WHERE email IN ('bernardo.domingos@ispsn.org', 'maria.eugenia@ispsn.org', 'joao.silva@ispsn.org', 'antonio.costa@ispsn.org', 'manuel.ferreira@ispsn.org')");
+        $db->exec("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES ('David Boio', 'david.boio@ispsn.org', NULL, 'admin', NULL, 1) ON DUPLICATE KEY UPDATE perfil = 'admin', activo = 1");
         $utilizadores = $db->query("SELECT u.*, c.nome as curso_nome FROM utilizadores u LEFT JOIN cursos c ON u.curso_id = c.id ORDER BY u.id ASC")->fetchAll();
         $cursos = $cursoModel->getAll();
         $docentes = $docenteModel->getAll();

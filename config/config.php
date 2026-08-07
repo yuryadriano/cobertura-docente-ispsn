@@ -34,7 +34,8 @@ if (!function_exists('get_ano_lectivo_activo')) {
 // E-mails de utilizadores com privilégios soberanos (Super Admin)
 if (!defined('SUPER_ADMIN_EMAILS')) {
     define('SUPER_ADMIN_EMAILS', [
-        'evaristo.adriano@ispsn.org'
+        'evaristo.adriano@ispsn.org',
+        'david.boio@ispsn.org'
     ]);
 }
 
