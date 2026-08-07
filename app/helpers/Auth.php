@@ -64,10 +64,7 @@ class Auth {
             return ['success' => false, 'message' => 'Por favor introduza o seu e-mail corporativo.'];
         }
 
-        $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM utilizadores WHERE email = ? AND activo = 1 LIMIT 1");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+        $user = self::findUserByEmail($email);
 
         if (!$user) {
             return ['success' => false, 'message' => 'E-mail corporativo não encontrado ou conta inativa na instituição.'];
@@ -105,6 +102,24 @@ class Auth {
         $stmt = $db->prepare("SELECT * FROM utilizadores WHERE email = ? AND activo = 1 LIMIT 1");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
+
+        if (!$user) {
+            $superAdmins = defined('SUPER_ADMIN_EMAILS') ? SUPER_ADMIN_EMAILS : ['evaristo.adriano@ispsn.org', 'david.boio@ispsn.org'];
+            if (in_array($email, array_map('strtolower', $superAdmins))) {
+                // Auto-registar Super Admin com perfil 'admin' pendente de Primeiro Acesso
+                $nomePartes = explode('.', explode('@', $email)[0]);
+                $nomeFormat = implode(' ', array_map('ucfirst', $nomePartes));
+                try {
+                    $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'admin', NULL, 1)");
+                    $stmtIns->execute([$nomeFormat, $email]);
+                    $stmt->execute([$email]);
+                    $user = $stmt->fetch();
+                } catch (\Exception $e) {
+                    // Ignorar duplicação caso ocorra em concorrência
+                }
+            }
+        }
+
         return $user ?: null;
     }
 
