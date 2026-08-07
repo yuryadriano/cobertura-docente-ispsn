@@ -266,7 +266,7 @@ unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_inf
   <?php endif; ?>
 
   <!-- Mode 1: Standard Login Form -->
-  <div id="mode-login" class="view-mode <?= $mode !== 'forgot' ? 'active' : '' ?>">
+  <div id="mode-login" class="view-mode <?= !in_array($mode, ['forgot', 'activate']) ? 'active' : '' ?>">
     <form action="index.php?action=login" method="POST">
       <div class="form-group">
         <label class="form-label" for="login-email">E-mail Corporativo</label>
@@ -291,7 +291,37 @@ unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_inf
     </form>
   </div>
 
-  <!-- Mode 2: Password Reset / Setup Form -->
+  <!-- Mode 2: Primeiro Acesso (Definir Palavra-Passe) -->
+  <div id="mode-activate" class="view-mode <?= $mode === 'activate' ? 'active' : '' ?>">
+    <div style="background:#F0FDF4; border:1px solid #86EFAC; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#166534; margin-bottom:18px;">
+      🔑 <b>Primeiro Acesso ao Portal ISPSN</b><br>
+      A sua conta foi ativada. Por favor defina a sua palavra-passe de acesso para entrar diretamente no seu perfil.
+    </div>
+    <form action="index.php?action=activate" method="POST">
+      <div class="form-group">
+        <label class="form-label" for="activate-email">E-mail Corporativo</label>
+        <div class="input-wrap">
+          <input type="email" id="activate-email" name="email" class="form-input no-btn" value="<?= htmlspecialchars($_GET['email'] ?? $resetEmail) ?>" required autofocus>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="activate-newpass">Nova Palavra-Passe</label>
+        <div class="input-wrap">
+          <input type="password" id="activate-newpass" name="new_password" class="form-input" placeholder="Mínimo 6 caracteres" minlength="6" required>
+          <button type="button" class="toggle-btn" onclick="togglePass('activate-newpass', this, event)">Mostrar</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" style="background: #166534;">Definir Palavra-Passe &amp; Entrar no Perfil</button>
+
+      <div class="back-link-wrap">
+        <a href="#" class="back-link" onclick="switchMode('login'); return false;">← Voltar ao Iniciar Sessão</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Mode 3: Password Reset / Setup Form -->
   <div id="mode-forgot" class="view-mode <?= $mode === 'forgot' ? 'active' : '' ?>">
     <?php if ($resetStep === 2 && $resetEmail): ?>
       <!-- Step 2: Enter PIN received in Email and New Password -->
@@ -360,13 +390,18 @@ unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_inf
   function switchMode(targetMode) {
     const loginEmailInput = document.getElementById('login-email');
     const forgotEmailInput = document.getElementById('forgot-email');
-    if (loginEmailInput && forgotEmailInput && loginEmailInput.value) {
-      forgotEmailInput.value = loginEmailInput.value;
+    const activateEmailInput = document.getElementById('activate-email');
+    const val = loginEmailInput ? loginEmailInput.value : '';
+    if (val) {
+      if (forgotEmailInput) forgotEmailInput.value = val;
+      if (activateEmailInput) activateEmailInput.value = val;
     }
 
     document.querySelectorAll('.view-mode').forEach(m => m.classList.remove('active'));
     if (targetMode === 'forgot') {
       document.getElementById('mode-forgot').classList.add('active');
+    } else if (targetMode === 'activate') {
+      document.getElementById('mode-activate').classList.add('active');
     } else {
       document.getElementById('mode-login').classList.add('active');
     }

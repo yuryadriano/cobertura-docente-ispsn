@@ -27,7 +27,7 @@ window.CURRENT_USER_ROLE = "<?= Auth::user()['perfil'] ?? 'coordenador' ?>";
 </div>
 
 <!-- Banner de Alerta para Planos Devolvidos -->
-<div id="banner-devolucao" style="display:none; background:#FBEAE8; border:1.5px solid #F5C6CB; border-radius:10px; padding:14px 18px; margin-bottom:18px; color:#C0392B;">
+<div id="banner-devolucao" style="display:none; opacity:1; transition: opacity 0.6s ease; background:#FBEAE8; border:1.5px solid #F5C6CB; border-radius:10px; padding:14px 18px; margin-bottom:18px; color:#C0392B;">
     <div style="font-weight:800; font-size:14px; display:flex; align-items:center; gap:8px;">
         <span>↩️</span> Plano Devolvido pela Presidência para Retificação
     </div>

@@ -63,6 +63,9 @@ class ApiController {
             case 'utilizadores_importar':
                 $this->importarUtilizadores();
                 break;
+            case 'utilizador_ativar_docente':
+                $this->ativarDocentePerfil();
+                break;
             case 'sugerir_docentes':
                 $this->sugerirDocentes();
                 break;
@@ -458,6 +461,66 @@ class ApiController {
         } catch (\Exception $e) {
             Response::error('Erro ao registar utilizador: ' . $e->getMessage());
         }
+    }
+
+    private function ativarDocentePerfil(): void {
+        if (!Auth::hasRole('admin')) {
+            Response::error('Apenas o Administrador pode ativar perfis de docentes.', 403);
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $docenteId = (int)($input['docente_id'] ?? 0);
+        $email     = trim(strtolower($input['email'] ?? ''));
+        $perfil    = trim($input['perfil'] ?? 'coordenador');
+        $cursoId   = !empty($input['curso_id']) ? (int)$input['curso_id'] : null;
+
+        if (!$docenteId) {
+            Response::error('Por favor selecione um docente válido.');
+        }
+        if (empty($email)) {
+            Response::error('Por favor introduza o e-mail corporativo do docente.');
+        }
+
+        $db = Database::getInstance();
+        $stmtDoc = $db->prepare("SELECT * FROM docentes WHERE id = ? LIMIT 1");
+        $stmtDoc->execute([$docenteId]);
+        $docente = $stmtDoc->fetch();
+
+        if (!$docente) {
+            Response::error('Docente não encontrado no sistema.');
+        }
+
+        $nomeDocente = $docente['nome'];
+
+        // Atualizar e-mail do docente na tabela de docentes
+        $stmtUpDoc = $db->prepare("UPDATE docentes SET email = ? WHERE id = ?");
+        $stmtUpDoc->execute([$email, $docenteId]);
+
+        // Verificar se já existe conta em utilizadores com este e-mail
+        $stmtCheck = $db->prepare("SELECT id FROM utilizadores WHERE email = ? LIMIT 1");
+        $stmtCheck->execute([$email]);
+        $userExist = $stmtCheck->fetch();
+
+        if ($userExist) {
+            // Atualizar conta existente para o novo perfil
+            $stmtUp = $db->prepare("UPDATE utilizadores SET nome = ?, perfil = ?, curso_id = ?, activo = 1 WHERE id = ?");
+            $stmtUp->execute([$nomeDocente, $perfil, $cursoId, $userExist['id']]);
+        } else {
+            // Inserir nova conta pendente de Primeiro Acesso (senha_hash = NULL)
+            $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, ?, ?, 1)");
+            $stmtIns->execute([$nomeDocente, $email, $perfil, $cursoId]);
+        }
+
+        $perfilNomes = [
+            'coordenador' => 'Coordenador de Curso',
+            'secretario_geral' => 'Secretário-Geral',
+            'presidente' => 'Presidência',
+            'gestor_academico' => 'Gestão Académica',
+            'grh' => 'GRH',
+            'admin' => 'Administração'
+        ];
+        $nomePerfilFormat = $perfilNomes[$perfil] ?? $perfil;
+
+        Response::success("Perfil de {$nomePerfilFormat} ativado com sucesso para {$nomeDocente}! O docente já pode aceder ao sistema com o e-mail {$email} no Primeiro Acesso.");
     }
 
     private function importarUtilizadores(): void {

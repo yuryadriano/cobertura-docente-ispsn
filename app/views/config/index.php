@@ -80,10 +80,62 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
             <?php if ($isAdmin): ?>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn sm ghost" style="border-color:var(--blue); color:var(--blue); font-weight:700;" onclick="window.abrirModalPermissoes()">🛡️ Matriz de Permissões (RBAC)</button>
+                    <button class="btn sm btn-ok" style="background:#1e8449; color:#fff; font-weight:700;" onclick="window.toggleFormAtivarDocente()">🎓 Ativar Perfil de Docente</button>
                     <button class="btn sm gold" onclick="window.toggleFormImportarExcel()">📥 Importar Lista (CSV)</button>
                     <button class="btn sm btn-p" onclick="window.toggleFormNovoUser()">+ Novo Utilizador</button>
                 </div>
             <?php endif; ?>
+        </div>
+
+        <!-- FORMULÁRIO DE ATIVAÇÃO DE PERFIL DE DOCENTE DA INSTITUIÇÃO -->
+        <div id="box-ativar-docente" style="display:none; background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:10px; padding:18px; margin-bottom:20px;">
+            <h4 style="margin:0 0 8px; color:#166534; font-size:14px; display:flex; align-items:center; gap:8px;">
+                🎓 Ativar Perfil &amp; Acesso a partir do Corpo Docente
+            </h4>
+            <p style="font-size:12.5px; color:#15803D; margin-bottom:14px; line-height:1.5;">
+                Selecione um professor da lista cadastrada no sistema para lhe atribuir um perfil funcional (ex.: <b>Secretário-Geral</b>, <b>Coordenador de Curso</b>, <b>Presidência</b>, etc.). O utilizador poderá aceder no <b>Primeiro Acesso</b> definindo a sua palavra-passe com o e-mail corporativo.
+            </p>
+            <form onsubmit="window.ativarPerfilDocente(event)">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:14px;">
+                    <div>
+                        <label style="font-weight:700; font-size:12px; color:#166534;">Selecionar Docente:</label>
+                        <select id="ad-docente" required class="form-control" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #86EFAC; font-weight:600;" onchange="window.preencherEmailDocente(this.value)">
+                            <option value="">-- Selecionar Docente --</option>
+                            <?php foreach ($docentes as $d): ?>
+                                <option value="<?= $d['id'] ?>" data-nome="<?= htmlspecialchars($d['nome']) ?>" data-email="<?= htmlspecialchars($d['email'] ?? '') ?>"><?= htmlspecialchars($d['nome']) ?> (<?= htmlspecialchars($d['grau_academico'] ?? 'Docente') ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight:700; font-size:12px; color:#166534;">E-mail Corporativo:</label>
+                        <input type="email" id="ad-email" required placeholder="ex: nome.sobrenome@ispsn.org" class="form-control" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #86EFAC; font-weight:600;">
+                    </div>
+                    <div>
+                        <label style="font-weight:700; font-size:12px; color:#166534;">Perfil de Acesso (RBAC):</label>
+                        <select id="ad-perfil" required class="form-control" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #86EFAC; font-weight:700;" onchange="window.toggleCursoDocenteField(this.value)">
+                            <option value="coordenador">Coordenador de Curso</option>
+                            <option value="secretario_geral">Secretário-Geral</option>
+                            <option value="presidente">Presidência</option>
+                            <option value="gestor_academico">Gestão Académica</option>
+                            <option value="grh">GRH (Recursos Humanos)</option>
+                            <option value="admin">Administração</option>
+                        </select>
+                    </div>
+                    <div id="wrap-ad-curso" style="display:block;">
+                        <label style="font-weight:700; font-size:12px; color:#166534;">Curso Atribuído (se Coordenador):</label>
+                        <select id="ad-curso" class="form-control" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #86EFAC; font-weight:600;">
+                            <option value="">-- Todos os Cursos --</option>
+                            <?php foreach ($cursos as $c): ?>
+                                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn sm ghost" onclick="window.toggleFormAtivarDocente()">Cancelar</button>
+                    <button type="submit" class="btn sm btn-ok" style="background:#166534; color:#fff; font-weight:700;">⚡ Ativar Perfil &amp; Conceder Acesso</button>
+                </div>
+            </form>
         </div>
 
         <!-- FORMULÁRIO DE IMPORTAÇÃO DE UTILIZADORES VIA EXCEL/CSV -->
@@ -448,6 +500,70 @@ window.alternarEstadoUser = async (userId, novoEstado) => {
         location.reload();
     } catch (err) {
         alert('Erro ao alterar estado do utilizador.');
+    }
+};
+
+window.toggleFormAtivarDocente = () => {
+    const box = document.getElementById('box-ativar-docente');
+    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+};
+
+window.preencherEmailDocente = (docenteId) => {
+    const select = document.getElementById('ad-docente');
+    const emailInput = document.getElementById('ad-email');
+    if (!select || !emailInput) return;
+
+    const opt = select.options[select.selectedIndex];
+    const email = opt ? opt.getAttribute('data-email') : '';
+    const nome  = opt ? opt.getAttribute('data-nome') : '';
+
+    if (email) {
+        emailInput.value = email;
+    } else if (nome) {
+        // Gerar sugestão de e-mail corporativo: nome.sobrenome@ispsn.org
+        const partes = nome.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/);
+        if (partes.length >= 2) {
+            emailInput.value = `${partes[0]}.${partes[partes.length - 1]}@ispsn.org`;
+        } else if (partes.length === 1) {
+            emailInput.value = `${partes[0]}@ispsn.org`;
+        }
+    }
+};
+
+window.toggleCursoDocenteField = (perfil) => {
+    const wrap = document.getElementById('wrap-ad-curso');
+    if (wrap) {
+        wrap.style.display = (perfil === 'coordenador') ? 'block' : 'none';
+    }
+};
+
+window.ativarPerfilDocente = async (e) => {
+    e.preventDefault();
+    const docente_id = document.getElementById('ad-docente').value;
+    const email      = document.getElementById('ad-email').value;
+    const perfil     = document.getElementById('ad-perfil').value;
+    const curso_id   = document.getElementById('ad-curso').value;
+
+    if (!docente_id || !email) {
+        alert('Por favor selecione um docente e introduza o e-mail corporativo.');
+        return;
+    }
+
+    try {
+        const res = await fetch('index.php?api=utilizador_ativar_docente', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ docente_id, email, perfil, curso_id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message || 'Perfil do docente ativado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.message || data.error || 'Falha ao ativar perfil.'));
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao ativar perfil do docente.');
     }
 };
 

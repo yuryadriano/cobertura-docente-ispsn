@@ -214,9 +214,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const bannerDev = document.getElementById('banner-devolucao');
             const bannerObs = document.getElementById('banner-devolucao-obs');
             if (bannerDev && bannerObs) {
+                if (window._bannerDevTimer) clearTimeout(window._bannerDevTimer);
                 if (planoData.estado === 'Devolvido') {
-                    bannerDev.style.display = 'block';
                     bannerObs.textContent = planoData.observacoes ? `Motivo/Parecer: "${planoData.observacoes}"` : 'Motivo não especificado. Consulte o histórico de auditoria.';
+                    bannerDev.style.display = 'block';
+                    bannerDev.style.opacity = '1';
+
+                    // O aviso de devolução fica visível ao abrir e desaparece automaticamente após 6 segundos
+                    window._bannerDevTimer = setTimeout(() => {
+                        bannerDev.style.opacity = '0';
+                        setTimeout(() => {
+                            bannerDev.style.display = 'none';
+                        }, 600);
+                    }, 6000);
                 } else {
                     bannerDev.style.display = 'none';
                 }

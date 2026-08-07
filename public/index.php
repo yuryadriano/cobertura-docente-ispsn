@@ -17,13 +17,16 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $result = Auth::attempt($email, $password);
     if ($result['success']) {
-        header('Location: index.php?page=painel');
+        $perfil = $result['user']['perfil'] ?? 'coordenador';
+        $navPages = Auth::roleInfo($perfil)['nav'] ?? ['painel'];
+        $landingPage = $navPages[0] ?? 'painel';
+        header('Location: index.php?page=' . $landingPage);
         exit;
     } else {
         $_SESSION['flash_error'] = $result['message'];
         if (!empty($result['is_first_access'])) {
             $_SESSION['reset_email'] = $email;
-            header('Location: index.php?page=login&mode=forgot');
+            header('Location: index.php?page=login&mode=activate&email=' . urlencode($email));
             exit;
         }
         header('Location: index.php?page=login');
@@ -223,6 +226,7 @@ switch ($page) {
         $db = Database::getInstance();
         $utilizadores = $db->query("SELECT u.*, c.nome as curso_nome FROM utilizadores u LEFT JOIN cursos c ON u.curso_id = c.id ORDER BY u.id ASC")->fetchAll();
         $cursos = $cursoModel->getAll();
+        $docentes = $docenteModel->getAll();
         $historico = $db->query("SELECT h.*, p.ano_lectivo, c.nome as curso_nome, u.nome as utilizador_nome FROM historico_aprovacoes h JOIN planos_cobertura p ON h.plano_id = p.id JOIN cursos c ON p.curso_id = c.id JOIN utilizadores u ON h.utilizador_id = u.id ORDER BY h.created_at DESC LIMIT 10")->fetchAll();
         require_once __DIR__ . '/../app/views/layouts/header.php';
         require_once __DIR__ . '/../app/views/layouts/sidebar.php';
