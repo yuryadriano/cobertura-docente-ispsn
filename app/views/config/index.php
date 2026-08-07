@@ -279,10 +279,11 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px; align-items:start;">
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:18px;">
                 <label style="font-weight:700; font-size:13px; color:var(--blue); display:block; margin-bottom:8px;">Ano Lectivo Em Curso:</label>
+                <?php $anoActivoConfig = get_ano_lectivo_activo(); ?>
                 <select id="cfg-ano-sel" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-weight:700; font-size:14px; background:#fff;" onchange="window.salvarAnoLectivo(this.value)">
-                    <option value="2025/26">2025/2026 (Histórico · Só Leitura)</option>
-                    <option value="2026/27" selected>2026/2027 (Ano Ativo em Curso)</option>
-                    <option value="2027/28">2027/2028 (Planeamento Futuro)</option>
+                    <option value="2025/26" <?= $anoActivoConfig === '2025/26' ? 'selected' : '' ?>>2025/2026 (Histórico · Só Leitura)</option>
+                    <option value="2026/27" <?= $anoActivoConfig === '2026/27' ? 'selected' : '' ?>>2026/2027 (Ano Ativo em Curso)</option>
+                    <option value="2027/28" <?= $anoActivoConfig === '2027/28' ? 'selected' : '' ?>>2027/2028 (Planeamento Futuro)</option>
                 </select>
                 <div style="font-size:11.5px; color:var(--mut); margin-top:8px;">Altera o contexto global de pré-carregamento dos planos de cobertura.</div>
             </div>
@@ -409,7 +410,9 @@ window.toggleFormImportarExcel = () => {
 };
 
 window.salvarAnoLectivo = (ano) => {
-    alert(`Ano lectivo ativo alterado para ${ano}`);
+    if (window.switchAnoLectivo) {
+        window.switchAnoLectivo(ano);
+    }
 };
 
 window.executarRollOver = async () => {

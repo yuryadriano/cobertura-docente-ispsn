@@ -15,9 +15,20 @@ if (!defined('APP_NAME')) {
     define('APP_NAME', 'Módulo de Cobertura Docente — ISPSN 2026/27');
 }
 
-// Ano Lectivo Ativo por Omissão no Sistema
+if (session_status() === PHP_SESSION_NONE) {
+    @session_start();
+}
+
+// Ano Lectivo Ativo no Sistema (Dinâmico via Sessão ou Padrão)
 if (!defined('ANO_LECTIVO_ACTIVO')) {
-    define('ANO_LECTIVO_ACTIVO', '2026/27');
+    $sessionAno = $_SESSION['ano_lectivo_activo'] ?? '2026/27';
+    define('ANO_LECTIVO_ACTIVO', $sessionAno);
+}
+
+if (!function_exists('get_ano_lectivo_activo')) {
+    function get_ano_lectivo_activo(): string {
+        return $_SESSION['ano_lectivo_activo'] ?? (defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27');
+    }
 }
 
 // E-mails de utilizadores com privilégios soberanos (Super Admin)

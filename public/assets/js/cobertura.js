@@ -6,7 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     let currentCursoId = 1;
     let currentCursoNome = 'Direito';
-    let currentAnoLectivo = '2026/27';
+    let currentAnoLectivo = window.CURRENT_ANO_LECTIVO || '2026/27';
     let selectedTurmaCod = '';
     let docentesList = [];
     let docentesMap = {};

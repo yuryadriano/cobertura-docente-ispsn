@@ -18,15 +18,16 @@ $currentRole = $currentUser['perfil'] ?? 'coordenador';
 <div class="top">
   <img src="assets/img/logo.png" alt="Logo ISPSN" class="logo">
   <h1>Portal ISPSN · BackOffice</h1>
-  <span class="yr">2026/27</span>
+<?php $currentAnoLectivo = get_ano_lectivo_activo(); ?>
+  <span class="yr"><?= htmlspecialchars($currentAnoLectivo) ?></span>
   <span class="demo-tag">PRODUÇÃO PHP</span>
   <div class="sp"></div>
   <div class="rolebox">
     <span style="font-size:12px;font-weight:600">Ano lectivo:</span>
     <select id="year-select" onchange="window.switchAnoLectivo(this.value)">
-      <option value="2025/26">2025/2026</option>
-      <option value="2026/27" selected>2026/2027</option>
-      <option value="2027/28">2027/2028</option>
+      <option value="2025/26" <?= $currentAnoLectivo === '2025/26' ? 'selected' : '' ?>>2025/2026</option>
+      <option value="2026/27" <?= $currentAnoLectivo === '2026/27' ? 'selected' : '' ?>>2026/2027</option>
+      <option value="2027/28" <?= $currentAnoLectivo === '2027/28' ? 'selected' : '' ?>>2027/2028</option>
     </select>
   </div>
   <div class="rolebox">

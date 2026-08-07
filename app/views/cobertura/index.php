@@ -6,6 +6,7 @@
 ?>
 <script>
 window.CURRENT_USER_ROLE = "<?= Auth::user()['perfil'] ?? 'coordenador' ?>";
+window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
 </script>
 
 <!-- CABEÇALHO SUPERIOR DA PÁGINA -->

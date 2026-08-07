@@ -90,6 +90,9 @@ class ApiController {
             case 'config_parametros_salvar':
                 $this->salvarParametrosConfig();
                 break;
+            case 'salvar_ano_lectivo':
+                $this->salvarAnoLectivo();
+                break;
             case 'executar_rollover':
                 $this->executarRollOver();
                 break;
@@ -573,6 +576,28 @@ class ApiController {
             Response::error('Apenas o Administrador pode alterar os parâmetros gerais.', 403);
         }
         Response::success('Parâmetros gerais do sistema e regras de conformidade atualizados com sucesso.');
+    }
+
+    private function salvarAnoLectivo(): void {
+        if (!Auth::check()) {
+            Response::error('Sessão não iniciada.', 401);
+            return;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $ano   = trim($input['ano_lectivo'] ?? ($_GET['ano_lectivo'] ?? ''));
+
+        if (empty($ano)) {
+            Response::error('Por favor especifique um ano lectivo válido.');
+            return;
+        }
+
+        $_SESSION['ano_lectivo_activo'] = $ano;
+        Response::json([
+            'success' => true,
+            'ano_lectivo' => $ano,
+            'message' => "Ano lectivo ativo alterado com sucesso para {$ano}."
+        ]);
     }
 
     private function executarRollOver(): void {
