@@ -72,14 +72,11 @@ class Auth {
 
         // Se a conta existe e foi atribuída pelo Admin, mas a palavra-passe ainda é NULL (Primeiro Acesso)
         if (is_null($user['senha_hash']) || $user['senha_hash'] === '') {
-            if (!empty($password) && strlen($password) >= 6) {
-                // Ativação automática no primeiro acesso com a palavra-passe fornecida pelo utilizador
-                return self::activateAccount($user['email'], $password);
-            }
             return [
                 'success' => false,
                 'is_first_access' => true,
-                'message' => 'Conta ativada pela instituição. Por favor introduza uma palavra-passe com no mínimo 6 caracteres para entrar.'
+                'user' => $user,
+                'message' => 'Primeiro Acesso ao Portal ISPSN: Por favor defina a sua palavra-passe de acesso.'
             ];
         }
 

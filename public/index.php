@@ -24,9 +24,10 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } else {
         if (!empty($result['is_first_access'])) {
+            $userEmail = $result['user']['email'] ?? $email;
             $_SESSION['flash_info'] = $result['message'];
-            $_SESSION['reset_email'] = $email;
-            header('Location: index.php?page=login&mode=activate&email=' . urlencode($email));
+            $_SESSION['reset_email'] = $userEmail;
+            header('Location: index.php?page=login&mode=activate&email=' . urlencode($userEmail));
             exit;
         }
         $_SESSION['flash_error'] = $result['message'];
