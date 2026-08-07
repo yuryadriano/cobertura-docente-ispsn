@@ -283,7 +283,7 @@ class Auth {
                 'nome' => 'Administração',
                 'user' => 'Administração',
                 'scope' => 'geral',
-                'nav' => ['painel', 'dashboard', 'cobertura', 'turmas', 'curriculo', 'docentes', 'cv', 'aprov'],
+                'nav' => ['painel', 'dashboard', 'cobertura', 'turmas', 'curriculo', 'docentes', 'cv', 'aprov', 'config'],
                 'desc' => 'Acesso total a todos os módulos, aprovações, configurações e gestão do sistema'
             ]
         ];
