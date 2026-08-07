@@ -201,12 +201,6 @@ try {
     $users = [
         ['nome' => 'Administrador TI', 'email' => 'admin.ti@ispsn.org', 'perfil' => 'admin', 'curso_id' => null, 'senha' => '123456'],
         ['nome' => 'Evaristo Adriano', 'email' => 'evaristo.adriano@ispsn.org', 'perfil' => 'coordenador', 'curso_id' => $cursosMap['Direito'] ?? null, 'senha' => '123456'],
-        ['nome' => 'Bernardo Domingos', 'email' => 'bernardo.domingos@ispsn.org', 'perfil' => 'gestor_academico', 'curso_id' => null, 'senha' => '123456'],
-        ['nome' => 'Maria Eugénia', 'email' => 'maria.eugenia@ispsn.org', 'perfil' => 'grh', 'curso_id' => null, 'senha' => '123456'],
-        ['nome' => 'Prof. Dr. João Silva', 'email' => 'joao.silva@ispsn.org', 'perfil' => 'presidente', 'curso_id' => null, 'senha' => '123456'],
-        ['nome' => 'António Costa', 'email' => 'antonio.costa@ispsn.org', 'perfil' => 'secretario_geral', 'curso_id' => null, 'senha' => '123456'],
-        // Utilizador pré-cadastrado pendente de Primeiro Acesso (senha NULL)
-        ['nome' => 'Manuel Ferreira', 'email' => 'manuel.ferreira@ispsn.org', 'perfil' => 'coordenador', 'curso_id' => $cursosMap['Engenharia Informática'] ?? null, 'senha' => null],
     ];
 
     $stmtUser = $db->prepare("
