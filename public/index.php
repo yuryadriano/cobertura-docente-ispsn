@@ -23,12 +23,13 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: index.php?page=' . $landingPage);
         exit;
     } else {
-        $_SESSION['flash_error'] = $result['message'];
         if (!empty($result['is_first_access'])) {
+            $_SESSION['flash_info'] = $result['message'];
             $_SESSION['reset_email'] = $email;
             header('Location: index.php?page=login&mode=activate&email=' . urlencode($email));
             exit;
         }
+        $_SESSION['flash_error'] = $result['message'];
         header('Location: index.php?page=login');
         exit;
     }

@@ -98,21 +98,33 @@ class Auth {
         $email = trim(strtolower($email));
         if (empty($email)) return null;
 
+        // Se o utilizador não digitou '@', acrescenta automaticamente '@ispsn.org'
+        $fullEmail = (strpos($email, '@') === false) ? ($email . '@ispsn.org') : $email;
+
         $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM utilizadores WHERE email = ? AND activo = 1 LIMIT 1");
-        $stmt->execute([$email]);
+        // 1. Pesquisa exata por e-mail completo
+        $stmt = $db->prepare("SELECT * FROM utilizadores WHERE LOWER(email) = ? AND activo = 1 LIMIT 1");
+        $stmt->execute([$fullEmail]);
         $user = $stmt->fetch();
+
+        // 2. Se não encontrar, tenta pesquisar por prefixo de e-mail ou nome
+        if (!$user) {
+            $prefix = explode('@', $email)[0];
+            $stmtPrefix = $db->prepare("SELECT * FROM utilizadores WHERE (LOWER(email) LIKE ? OR LOWER(nome) LIKE ?) AND activo = 1 LIMIT 1");
+            $stmtPrefix->execute(["%{$prefix}%", "%{$prefix}%"]);
+            $user = $stmtPrefix->fetch();
+        }
 
         if (!$user) {
             $superAdmins = defined('SUPER_ADMIN_EMAILS') ? SUPER_ADMIN_EMAILS : ['evaristo.adriano@ispsn.org', 'david.boio@ispsn.org'];
-            if (in_array($email, array_map('strtolower', $superAdmins))) {
+            if (in_array($fullEmail, array_map('strtolower', $superAdmins))) {
                 // Auto-registar Super Admin com perfil 'admin' pendente de Primeiro Acesso
-                $nomePartes = explode('.', explode('@', $email)[0]);
+                $nomePartes = explode('.', explode('@', $fullEmail)[0]);
                 $nomeFormat = implode(' ', array_map('ucfirst', $nomePartes));
                 try {
                     $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'admin', NULL, 1)");
-                    $stmtIns->execute([$nomeFormat, $email]);
-                    $stmt->execute([$email]);
+                    $stmtIns->execute([$nomeFormat, $fullEmail]);
+                    $stmt->execute([$fullEmail]);
                     $user = $stmt->fetch();
                 } catch (\Exception $e) {
                     // Ignorar duplicação caso ocorra em concorrência
