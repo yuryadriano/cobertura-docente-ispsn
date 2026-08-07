@@ -141,6 +141,10 @@ class Auth {
             return ['success' => false, 'message' => 'Acesso não autorizado. O seu e-mail ainda não possui um perfil ou área atribuída pelo Administrador.'];
         }
 
+        if (!empty($user['senha_hash'])) {
+            return ['success' => false, 'message' => 'A sua palavra-passe já foi registrada anteriormente. Por favor introduza a sua senha no login normal.'];
+        }
+
         $hash = password_hash($newPassword, PASSWORD_DEFAULT);
         $db = Database::getInstance();
         $stmt = $db->prepare("UPDATE utilizadores SET senha_hash = ? WHERE id = ?");

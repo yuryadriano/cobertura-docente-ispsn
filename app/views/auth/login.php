@@ -283,8 +283,7 @@ unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_inf
         </div>
       </div>
 
-      <div class="form-extra" style="display:flex; justify-content:space-between; align-items:center;">
-        <a href="#" class="forgot-link" onclick="switchMode('activate'); return false;" style="color:#166534; font-weight:700;">🔑 Primeiro Acesso?</a>
+      <div class="form-extra">
         <a href="#" class="forgot-link" onclick="switchMode('forgot'); return false;">Esqueceu a senha?</a>
       </div>
 
