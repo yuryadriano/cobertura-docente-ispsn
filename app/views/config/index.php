@@ -181,6 +181,7 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                         <label style="font-weight:600; font-size:12px;">Perfil de Acesso:</label>
                         <select id="nu-perfil" required class="form-control" style="width:100%; padding:6px 10px; border-radius:6px; border:1px solid var(--line);">
                             <option value="coordenador">Coordenador de Curso</option>
+                            <option value="chefe_departamento">Chefe de Departamento</option>
                             <option value="gestor_academico">Gestão Académica</option>
                             <option value="grh">GRH</option>
                             <option value="presidente">Presidente</option>
@@ -228,6 +229,7 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                         <td>
                             <select id="usr-perfil-<?= $u['id'] ?>" style="padding:4px 8px; border-radius:6px; font-weight:600; font-size:12.5px; border:1px solid var(--line); width:100%;" <?= !$isAdmin ? 'disabled' : '' ?>>
                                 <option value="coordenador" <?= $u['perfil'] === 'coordenador' ? 'selected' : '' ?>>Coordenador de Curso</option>
+                                <option value="chefe_departamento" <?= $u['perfil'] === 'chefe_departamento' ? 'selected' : '' ?>>Chefe de Departamento</option>
                                 <option value="gestor_academico" <?= $u['perfil'] === 'gestor_academico' ? 'selected' : '' ?>>Gestão Académica</option>
                                 <option value="grh" <?= $u['perfil'] === 'grh' ? 'selected' : '' ?>>GRH</option>
                                 <option value="presidente" <?= $u['perfil'] === 'presidente' ? 'selected' : '' ?>>Presidente</option>
