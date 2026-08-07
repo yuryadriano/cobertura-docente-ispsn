@@ -97,8 +97,13 @@ if ($action === 'logout') {
     exit;
 }
 
-// 2. Permite Troca Rápida de Perfil via Header (para testes e demonstração fiéis ao protótipo)
+// 2. Permite Troca Rápida de Perfil via Header (Apenas para Super Admin em Testes de Auditoria)
 if (isset($_GET['role']) && Auth::check()) {
+    if (!Auth::isSuperAdmin()) {
+        $_SESSION['flash_error'] = 'Apenas a Administração tem autorização para alterar perfis.';
+        header('Location: index.php?page=cobertura');
+        exit;
+    }
     $targetRole = $_GET['role'];
     $db = Database::getInstance();
     $stmt = $db->prepare("SELECT * FROM utilizadores WHERE perfil = ? AND activo = 1 LIMIT 1");

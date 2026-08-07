@@ -30,6 +30,7 @@ $currentRole = $currentUser['perfil'] ?? 'coordenador';
       <option value="2027/28" <?= $currentAnoLectivo === '2027/28' ? 'selected' : '' ?>>2027/2028</option>
     </select>
   </div>
+  <?php if (Auth::isSuperAdmin()): ?>
   <div class="rolebox">
     <span style="font-size:12px;font-weight:600">Perfil Ativo:</span>
     <select id="role-select" onchange="window.switchRole(this.value)">
@@ -42,6 +43,11 @@ $currentRole = $currentUser['perfil'] ?? 'coordenador';
       <option value="admin" <?= $currentRole === 'admin' ? 'selected' : '' ?>>Administração</option>
     </select>
   </div>
+  <?php else: ?>
+  <div class="rolebox" style="background:#1F4E79; color:#fff; padding:6px 12px; border-radius:6px; font-weight:700; font-size:12px;">
+    👤 Perfil: <?= htmlspecialchars(Auth::roleInfo()['nome']) ?>
+  </div>
+  <?php endif; ?>
 <?php
 require_once __DIR__ . '/../../helpers/Notification.php';
 $notificationsList = Notification::getNotifications();
