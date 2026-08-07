@@ -67,15 +67,15 @@ class Auth {
         $user = self::findUserByEmail($email);
 
         if (!$user) {
-            return ['success' => false, 'message' => 'E-mail corporativo não encontrado ou conta inativa na instituição.'];
+            return ['success' => false, 'message' => 'Acesso não autorizado. O seu e-mail ainda não possui um perfil ou área atribuída pelo Administrador.'];
         }
 
-        // Se a conta existe mas a palavra-passe ainda é NULL ou vazia (Primeiro Acesso)
+        // Se a conta existe e foi atribuída pelo Admin, mas a palavra-passe ainda é NULL (Primeiro Acesso)
         if (is_null($user['senha_hash']) || $user['senha_hash'] === '') {
             return [
                 'success' => false,
                 'is_first_access' => true,
-                'message' => 'Conta ativa por pré-registo. Por favor defina a sua palavra-passe de Primeiro Acesso.'
+                'message' => 'Conta ativada pela instituição. Por favor defina a sua palavra-passe para aceder ao sistema.'
             ];
         }
 
@@ -138,7 +138,7 @@ class Auth {
 
         $user = self::findUserByEmail($email);
         if (!$user) {
-            return ['success' => false, 'message' => 'E-mail corporativo não encontrado na lista de pré-cadastro da instituição.'];
+            return ['success' => false, 'message' => 'Acesso não autorizado. O seu e-mail ainda não possui um perfil ou área atribuída pelo Administrador.'];
         }
 
         $hash = password_hash($newPassword, PASSWORD_DEFAULT);
