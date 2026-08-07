@@ -19,6 +19,12 @@ class GestaoEscolarSyncService {
         $this->jsonPath = __DIR__ . '/../../01_Portal_Autonomo/dados/portal_data.json';
     }
 
+    private function cleanEncoding(string $str): string {
+        $bad = ['CiÛncia', 'PolÝtica', 'Relaþ§es', 'EducaþÒo', 'Educaþao', 'þ', '§', 'Û', 'Ý', 'Ò', 'Þ'];
+        $good = ['Ciência', 'Política', 'Relações', 'Educação', 'Educação', 'ç', 'õ', 'ê', 'í', 'ã', 'Ç'];
+        return str_replace($bad, $good, $str);
+    }
+
     /**
      * Ponto de entrada principal: Executa a sincronização completa (Pull & Update)
      */
@@ -138,11 +144,12 @@ class GestaoEscolarSyncService {
             // É um objeto associativo por nome de curso no portal_data.json
             $idCounter = 1;
             foreach ($cursosData as $nomeCurso => $conteudo) {
-                $codigo = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $nomeCurso), 0, 4));
+                $nomeCursoClean = $this->cleanEncoding($nomeCurso);
+                $codigo = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $nomeCursoClean), 0, 4));
                 $stmt->execute([
                     ':id'     => $idCounter,
                     ':codigo' => $codigo ?: "C{$idCounter}",
-                    ':nome'   => $nomeCurso
+                    ':nome'   => $nomeCursoClean
                 ]);
                 $idCounter++;
                 $count++;
@@ -150,7 +157,7 @@ class GestaoEscolarSyncService {
         } elseif (is_array($cursosData)) {
             foreach ($cursosData as $c) {
                 $id = (int)($c['id'] ?? 0);
-                $nome = trim($c['nome'] ?? '');
+                $nome = $this->cleanEncoding(trim($c['nome'] ?? ''));
                 $codigo = strtoupper(trim($c['codigo'] ?? substr($nome, 0, 4)));
 
                 if ($id && $nome) {

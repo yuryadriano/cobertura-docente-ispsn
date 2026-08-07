@@ -227,6 +227,13 @@ switch ($page) {
         // Limpar utilizadores de teste fictícios da base de dados e assegurar conta do Super Admin David Boio
         $db->exec("DELETE FROM utilizadores WHERE email IN ('bernardo.domingos@ispsn.org', 'maria.eugenia@ispsn.org', 'joao.silva@ispsn.org', 'antonio.costa@ispsn.org', 'manuel.ferreira@ispsn.org')");
         $db->exec("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES ('David Boio', 'david.boio@ispsn.org', NULL, 'admin', NULL, 1) ON DUPLICATE KEY UPDATE perfil = 'admin', activo = 1");
+        
+        // Corrigir caracteres de acentuação corrompidos (CP1252 -> UTF-8) na base de dados
+        $db->exec("UPDATE cursos SET nome = REPLACE(REPLACE(REPLACE(REPLACE(nome, 'CiÛncia', 'Ciência'), 'PolÝtica', 'Política'), 'Relaþ§es', 'Relações'), 'EducaþÒo', 'Educação') WHERE nome LIKE '%Û%' OR nome LIKE '%Ý%' OR nome LIKE '%þ%' OR nome LIKE '%§%'");
+        $db->exec("UPDATE disciplinas SET nome = REPLACE(REPLACE(REPLACE(REPLACE(nome, 'CiÛncia', 'Ciência'), 'PolÝtica', 'Política'), 'Relaþ§es', 'Relações'), 'EducaþÒo', 'Educação') WHERE nome LIKE '%Û%' OR nome LIKE '%Ý%' OR nome LIKE '%þ%' OR nome LIKE '%§%'");
+        $db->exec("UPDATE docentes SET especialidade = REPLACE(REPLACE(REPLACE(REPLACE(especialidade, 'CiÛncia', 'Ciência'), 'PolÝtica', 'Política'), 'Relaþ§es', 'Relações'), 'EducaþÒo', 'Educação') WHERE especialidade LIKE '%Û%' OR especialidade LIKE '%Ý%' OR especialidade LIKE '%þ%' OR especialidade LIKE '%§%'");
+        $db->exec("UPDATE linhas_cobertura SET disciplina_nome = REPLACE(REPLACE(REPLACE(REPLACE(disciplina_nome, 'CiÛncia', 'Ciência'), 'PolÝtica', 'Política'), 'Relaþ§es', 'Relações'), 'EducaþÒo', 'Educação') WHERE disciplina_nome LIKE '%Û%' OR disciplina_nome LIKE '%Ý%' OR disciplina_nome LIKE '%þ%' OR disciplina_nome LIKE '%§%'");
+
         $utilizadores = $db->query("SELECT u.*, c.nome as curso_nome FROM utilizadores u LEFT JOIN cursos c ON u.curso_id = c.id ORDER BY u.id ASC")->fetchAll();
         $cursos = $cursoModel->getAll();
         $docentes = $docenteModel->getAll();
