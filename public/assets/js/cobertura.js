@@ -193,8 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const btnSubmeter = document.getElementById('btn-submeter');
         const btnAprovarDepto = document.getElementById('btn-aprovar-depto');
+        const btnRecusarDepto = document.getElementById('btn-recusar-depto');
         const btnValidarPR = document.getElementById('btn-validar-pr');
-        const btnDevolver = document.getElementById('btn-devolver');
 
         if (badgeEstado && planoData) {
             badgeEstado.textContent = planoData.estado;
@@ -212,11 +212,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnAprovarDepto) {
                 btnAprovarDepto.style.display = (isChefeDeptoOrAdmin && ['Submetido', 'Rascunho', 'Em Elaboração'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
+            if (btnRecusarDepto) {
+                btnRecusarDepto.style.display = (isChefeDeptoOrAdmin && ['Submetido', 'Rascunho', 'Em Elaboração'].includes(planoData.estado)) ? 'inline-block' : 'none';
+            }
             if (btnValidarPR) {
                 btnValidarPR.style.display = (isPresidenteOrAdmin && ['Submetido', 'Aprovado pelo Departamento', 'Aprovado'].includes(planoData.estado)) ? 'inline-block' : 'none';
-            }
-            if (btnDevolver) {
-                btnDevolver.style.display = ((isChefeDeptoOrAdmin || isPresidenteOrAdmin) && ['Submetido', 'Aprovado pelo Departamento'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
 
             const bannerDev = document.getElementById('banner-devolucao');
@@ -612,6 +612,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const btnRecusarDepto = document.getElementById('btn-recusar-depto');
+    if (btnRecusarDepto) {
+        btnRecusarDepto.addEventListener('click', async () => {
+            if (!planoData) return;
+            const obs = prompt('Como Chefe de Departamento, insira o motivo da recusa do plano:');
+            if (obs !== null && obs.trim() !== '') {
+                const res = await fetch('index.php?api=plano_estado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plano_id: planoData.id, estado: 'Devolvido', observacoes: obs })
+                });
+                const data = await res.json();
+                alert(data.message || 'Plano Recusado pelo Chefe de Departamento.');
+                loadPlano(currentCursoId);
+            }
+        });
+    }
+
     const btnValidarPR = document.getElementById('btn-validar-pr');
     if (btnValidarPR) {
         btnValidarPR.addEventListener('click', async () => {
@@ -624,23 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await res.json();
                 alert(data.message || 'Plano Validado com sucesso pela Presidência!');
-                loadPlano(currentCursoId);
-            }
-        });
-    }
-
-    if (btnDevolver) {
-        btnDevolver.addEventListener('click', async () => {
-            if (!planoData) return;
-            const obs = prompt('Insira o motivo da recusa / devolução do plano para retificação:');
-            if (obs !== null && obs.trim() !== '') {
-                const res = await fetch('index.php?api=plano_estado', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plano_id: planoData.id, estado: 'Devolvido', observacoes: obs })
-                });
-                const data = await res.json();
-                alert(data.message || 'Plano devolvido para retificação.');
                 loadPlano(currentCursoId);
             }
         });

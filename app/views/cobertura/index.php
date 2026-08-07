@@ -23,9 +23,9 @@ window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
         <button onclick="window.exportarPDFOficial()" class="btn ghost" style="font-weight:700; border-color:var(--blue); color:var(--blue); padding:6px 12px; font-size:12px;" title="Relatório Oficial em PDF com Assinaturas">📄 PDF Oficial</button>
         <button onclick="window.exportarExcelOficial()" class="btn ghost" style="font-weight:700; border-color:#1E8449; color:#1E8449; padding:6px 12px; font-size:12px;" title="Descarregar Ficheiro Excel/CSV Estruturado">📊 Excel (CSV)</button>
         <button id="btn-submeter" class="btn btn-p" style="display:none; font-size:12px; padding:6px 14px;">📤 Submeter ao Chefe de Depto</button>
-        <button id="btn-aprovar-depto" class="btn btn-ok" style="display:none; font-size:12px; padding:6px 14px; background:#1E8449;">✅ Aprovar Plano (Chefe de Depto)</button>
+        <button id="btn-aprovar-depto" class="btn btn-ok" style="display:none; font-size:12px; padding:6px 14px; background:#1E8449;">✅ Aprovar (Chefe de Depto)</button>
+        <button id="btn-recusar-depto" class="btn btn-bad" style="display:none; font-size:12px; padding:6px 14px; background:#C0392B;">❌ Recusar (Chefe de Depto)</button>
         <button id="btn-validar-pr" class="btn btn-ok" style="display:none; font-size:12px; padding:6px 14px; background:#1F4E79;">🛡️ Validar Plano (Presidência)</button>
-        <button id="btn-devolver" class="btn btn-bad" style="display:none; font-size:12px; padding:6px 14px; background:#C0392B;">↩️ Devolver para Retificação</button>
     </div>
 </div>
 

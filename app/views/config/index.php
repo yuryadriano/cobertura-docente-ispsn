@@ -131,6 +131,15 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div id="wrap-ad-depto" style="display:none;">
+                        <label style="font-weight:700; font-size:12px; color:#166534;">Departamento Atribuído (se Chefe de Depto):</label>
+                        <select id="ad-depto" class="form-control" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #86EFAC; font-weight:700;">
+                            <option value="">-- Selecionar Departamento --</option>
+                            <option value="1">Departamento de Ciências Sociais e Humanas</option>
+                            <option value="2">Departamento dos Assuntos Académicos</option>
+                            <option value="3">Departamento de Ciências da Saúde</option>
+                        </select>
+                    </div>
                 </div>
                 <div style="display:flex; justify-content:flex-end; gap:8px;">
                     <button type="button" class="btn sm ghost" onclick="window.toggleFormAtivarDocente()">Cancelar</button>
@@ -654,6 +663,21 @@ window.importarUtilizadoresCSV = async (e) => {
 
     reader.readAsText(file);
 };
+
+window.toggleCursoDocenteField = function(val) {
+    const wrapCurso = document.getElementById('wrap-ad-curso');
+    const wrapDepto = document.getElementById('wrap-ad-depto');
+    if (val === 'chefe_departamento') {
+        if (wrapCurso) wrapCurso.style.display = 'none';
+        if (wrapDepto) wrapDepto.style.display = 'block';
+    } else if (val === 'coordenador') {
+        if (wrapCurso) wrapCurso.style.display = 'block';
+        if (wrapDepto) wrapDepto.style.display = 'none';
+    } else {
+        if (wrapCurso) wrapCurso.style.display = 'none';
+        if (wrapDepto) wrapDepto.style.display = 'none';
+    }
+};
 </script>
 
 <!-- MODAL DA MATRIZ COMPLETA DE PERMISSÕES (RBAC) -->
@@ -692,6 +716,15 @@ window.importarUtilizadoresCSV = async (e) => {
                         <td style="text-align:center;">❌</td>
                         <td style="text-align:center;">❌</td>
                         <td style="text-align:center;">❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Chefe de Departamento</strong></td>
+                        <td><span class="pill warn" style="background:#FFF9E6; color:#B45309; font-weight:700;">Seu Departamento</span></td>
+                        <td style="text-align:center;">✅</td>
+                        <td style="text-align:center;">❌</td>
+                        <td style="text-align:center;">✅ Aprovar / Recusar</td>
+                        <td style="text-align:center;">Consulta</td>
+                        <td style="text-align:center;">❌ (Bloqueado)</td>
                     </tr>
                     <tr>
                         <td><strong>Gestão Académica</strong></td>
