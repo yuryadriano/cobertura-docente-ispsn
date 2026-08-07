@@ -241,9 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const canEditCoverage = ['coordenador', 'admin'].includes(userRole);
-        const isPlanLocked = planoData ? ['Submetido', 'Aprovado'].includes(planoData.estado) : false;
-        // Admin nunca fica bloqueado. Coordenador fica bloqueado se o plano já foi submetido/aprovado.
+        const canEditCoverage = ['coordenador', 'chefe_departamento', 'presidente', 'admin'].includes(userRole);
+        const isPlanLocked = planoData ? ['Validado'].includes(planoData.estado) : false;
+        // O plano fica bloqueado apenas se já estiver totalmente Validado (exceto para Admin)
         const isLocked = !canEditCoverage || (isPlanLocked && userRole !== 'admin');
         const disabledAttr = isLocked ? 'disabled' : '';
 
