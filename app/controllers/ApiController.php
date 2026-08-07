@@ -256,20 +256,42 @@ class ApiController {
         $novoEstado = $input['estado'] ?? '';
         $obs = $input['observacoes'] ?? null;
 
-        if (!$planoId || !in_array($novoEstado, ['Rascunho', 'Submetido', 'Aprovado', 'Devolvido'])) {
+        if (!$planoId || !in_array($novoEstado, ['Rascunho', 'Em Elaboração', 'Submetido', 'Aprovado pelo Departamento', 'Validado', 'Devolvido'])) {
             Response::error('Dados inválidos para alteração de estado.');
         }
 
-        // Validação de permissão RBAC: Exclusivo da Presidência
-        if (in_array($novoEstado, ['Aprovado', 'Devolvido']) && !Auth::canApprove()) {
-            Response::error('Apenas o Presidente tem autorização soberana para aprovar ou devolver planos.', 403);
+        $user = Auth::user();
+        $perfil = $user['perfil'] ?? 'coordenador';
+
+        // Validação de permissão RBAC por etapa
+        if ($novoEstado === 'Aprovado pelo Departamento' && !in_array($perfil, ['chefe_departamento', 'admin'])) {
+            Response::error('Apenas o Chefe de Departamento tem autorização para aprovar este plano nesta etapa.', 403);
         }
 
-        $res = $this->planoModel->updateEstadoPlano($planoId, $novoEstado, $obs, Auth::user()['id'] ?? null);
+        if ($novoEstado === 'Validado' && !in_array($perfil, ['presidente', 'admin'])) {
+            Response::error('Apenas a Presidência tem autorização soberana para validar este plano.', 403);
+        }
+
+        if ($novoEstado === 'Devolvido' && !in_array($perfil, ['chefe_departamento', 'presidente', 'admin'])) {
+            Response::error('Apenas o Chefe de Departamento ou a Presidência podem devolver planos para retificação.', 403);
+        }
+
+        if ($novoEstado === 'Aprovado pelo Departamento') {
+            $res = $this->planoModel->aprovarPeloDepartamento($planoId, $user['id'] ?? 1, $obs);
+        } elseif ($novoEstado === 'Validado') {
+            $res = $this->planoModel->validarPelaPresidencia($planoId, $user['id'] ?? 1, $obs);
+        } elseif ($novoEstado === 'Submetido') {
+            $res = $this->planoModel->submeterPlano($planoId, $user['id'] ?? 1);
+        } elseif ($novoEstado === 'Devolvido') {
+            $res = $this->planoModel->devolverPlano($planoId, $user['id'] ?? 1, $obs);
+        } else {
+            $res = $this->planoModel->updateEstadoPlano($planoId, $novoEstado, $obs, $user['id'] ?? null);
+        }
+
         if ($res) {
             $planoObj = $this->planoModel->getLinhasPlano($planoId);
             $planoDb = ['id' => $planoId, 'curso_id' => $planoObj[0]['curso_id'] ?? 1, 'ano_lectivo' => '2026/27'];
-            Notification::notifyStateChange($planoDb, $novoEstado, $obs, Auth::user());
+            Notification::notifyStateChange($planoDb, $novoEstado, $obs, $user);
 
             Response::success("Estado do plano alterado para '$novoEstado' com sucesso.");
         } else {

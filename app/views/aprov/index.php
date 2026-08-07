@@ -30,7 +30,7 @@ $canApprove = Auth::canApprove();
                     <td>
                         <?php 
                             $st = $s['estado'] ?? 'Rascunho';
-                            $bClass = ($st === 'Aprovado') ? 'b-sim' : (($st === 'Submetido') ? 'b-ni' : 'b-nao');
+                            $bClass = ($st === 'Validado' || $st === 'Aprovado') ? 'b-sim' : (in_array($st, ['Submetido', 'Aprovado pelo Departamento']) ? 'b-ni' : 'b-nao');
                         ?>
                         <span class="b <?= $bClass ?>"><?= htmlspecialchars($st) ?></span>
                     </td>
@@ -41,8 +41,14 @@ $canApprove = Auth::canApprove();
                         <button onclick="window.verHistoricoAprovacao(<?= $s['curso_id'] ?>)" class="btn sm ghost" style="color:#8e44ad; border-color:#8e44ad;" title="Ver Linha do Tempo de Auditoria">📜 Histórico</button>
                         <a href="index.php?page=relatorio_plano&curso_id=<?= $s['curso_id'] ?>" target="_blank" class="btn sm ghost" style="color:var(--blue); border-color:var(--blue);" title="Imprimir / PDF Oficial">📄 PDF</a>
                         <a href="index.php?api=exportar_excel&curso_id=<?= $s['curso_id'] ?>" class="btn sm ghost" style="color:#1E8449; border-color:#1E8449;" title="Descarregar Excel">📊 Excel</a>
-                        <?php if (Auth::canApprove()): ?>
-                            <button class="btn sm btn-ok" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Aprovado')">Aprovar</button>
+                        
+                        <?php if ($st === 'Submetido' && Auth::hasRole(['chefe_departamento', 'admin'])): ?>
+                            <button class="btn sm btn-ok" style="background:#1E8449;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Aprovado pelo Departamento')">✅ Aprovar pelo Depto</button>
+                            <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">Devolver</button>
+                        <?php endif; ?>
+
+                        <?php if ($st === 'Aprovado pelo Departamento' && Auth::hasRole(['presidente', 'admin'])): ?>
+                            <button class="btn sm btn-ok" style="background:#1F4E79;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Validado')">🛡️ Validar (Presidência)</button>
                             <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">Devolver</button>
                         <?php endif; ?>
                     </td>

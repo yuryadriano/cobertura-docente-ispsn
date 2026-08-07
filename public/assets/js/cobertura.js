@@ -188,27 +188,35 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPlano() {
         const userRole = window.CURRENT_USER_ROLE || 'coordenador';
         const isCoordOrAdmin = ['coordenador', 'admin'].includes(userRole);
-        const isPresidente = userRole === 'presidente';
+        const isChefeDeptoOrAdmin = ['chefe_departamento', 'admin'].includes(userRole);
+        const isPresidenteOrAdmin = ['presidente', 'admin'].includes(userRole);
+
+        const btnSubmeter = document.getElementById('btn-submeter');
+        const btnAprovarDepto = document.getElementById('btn-aprovar-depto');
+        const btnValidarPR = document.getElementById('btn-validar-pr');
         const btnDevolver = document.getElementById('btn-devolver');
 
         if (badgeEstado && planoData) {
             badgeEstado.textContent = planoData.estado;
-            if (planoData.estado === 'Aprovado') {
+            if (['Validado', 'Aprovado'].includes(planoData.estado)) {
                 badgeEstado.className = 'b b-sim';
-            } else if (planoData.estado === 'Submetido') {
+            } else if (['Submetido', 'Aprovado pelo Departamento'].includes(planoData.estado)) {
                 badgeEstado.className = 'b b-ni';
             } else {
                 badgeEstado.className = 'b b-nao';
             }
 
             if (btnSubmeter) {
-                btnSubmeter.style.display = (isCoordOrAdmin && ['Rascunho', 'Devolvido'].includes(planoData.estado)) ? 'inline-block' : 'none';
+                btnSubmeter.style.display = (isCoordOrAdmin && ['Rascunho', 'Devolvido', 'Em Elaboração'].includes(planoData.estado)) ? 'inline-block' : 'none';
             }
-            if (btnAprovar) {
-                btnAprovar.style.display = (isPresidente && planoData.estado === 'Submetido') ? 'inline-block' : 'none';
+            if (btnAprovarDepto) {
+                btnAprovarDepto.style.display = (isChefeDeptoOrAdmin && planoData.estado === 'Submetido') ? 'inline-block' : 'none';
+            }
+            if (btnValidarPR) {
+                btnValidarPR.style.display = (isPresidenteOrAdmin && planoData.estado === 'Aprovado pelo Departamento') ? 'inline-block' : 'none';
             }
             if (btnDevolver) {
-                btnDevolver.style.display = (isPresidente && planoData.estado === 'Submetido') ? 'inline-block' : 'none';
+                btnDevolver.style.display = ((isChefeDeptoOrAdmin && planoData.estado === 'Submetido') || (isPresidenteOrAdmin && planoData.estado === 'Aprovado pelo Departamento')) ? 'inline-block' : 'none';
             }
 
             const bannerDev = document.getElementById('banner-devolucao');
@@ -314,6 +322,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     `<option value="${o}" ${o === (l.parecer || 'Manter') ? 'selected' : ''}>${o || '—'}</option>`
                 ).join('');
 
+                const decVal = l.decisao_aprovacao || 'Aprovar';
+                const decSelOptions = [
+                    'Aprovar',
+                    'Manter c/ acompanhamento',
+                    'Aprovar c/ condição',
+                    'Solicitar substituição'
+                ];
+                const decSel = decSelOptions.map(o => 
+                    `<option value="${o}" ${o === decVal ? 'selected' : ''}>${o}</option>`
+                ).join('');
+
+                const decColor = decVal === 'Aprovar' ? '#166534' : (decVal === 'Solicitar substituição' ? '#C0392B' : '#B45309');
+
                 const btnReplicar = (l.docente_id && !isLocked) 
                     ? `<button class="btn sm ghost" title="Atribuir a esta disciplina em todas as turmas do ano" onclick="window.applyAllTurmas(${l.plano_id}, ${l.disciplina_id}, ${l.docente_id})">↳ todas as turmas</button>` 
                     : '';
@@ -340,7 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="min-width:110px"><select ${disabledAttr} onchange="window.updateLinhaField(${l.id}, 'justificacao', this.value)">${justSel}</select></td>
                         <td style="min-width:105px"><select ${disabledAttr} onchange="window.updateLinhaField(${l.id}, 'regime', this.value)">${regSel}</select></td>
                         <td style="min-width:120px"><select ${disabledAttr} onchange="window.updateLinhaField(${l.id}, 'parecer', this.value)">${parSel}</select></td>
-                        <td style="width:120px">${btnReplicar}</td>
+                        <td style="width:110px">${btnReplicar}</td>
+                        <td style="min-width:165px">
+                            <select ${disabledAttr} style="font-weight:700; color:${decColor}; background:#F8FAFC; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; font-size:12px;" onchange="window.updateLinhaField(${l.id}, 'decisao_aprovacao', this.value)">
+                                ${decSel}
+                            </select>
+                        </td>
                     </tr>
                 `;
             });
@@ -515,37 +541,55 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmeter.addEventListener('click', async () => {
             if (!planoData) return;
 
-            // Verificação de justificativas obrigatórias para desconformidades
             const semJustificacao = linhasData.filter(l => l.docente_id && l.conformidade !== 'Sim' && (!l.justificacao || l.justificacao === '—' || l.justificacao.trim() === ''));
             if (semJustificacao.length > 0) {
-                alert(`Atenção: Existem ${semJustificacao.length} disciplina(s) com conformidade Parcial/Não sem justificativa. Preencha a justificação antes de submeter à Presidência.`);
+                alert(`Atenção: Existem ${semJustificacao.length} disciplina(s) com conformidade Parcial/Não sem justificativa. Preencha a justificação antes de submeter.`);
                 return;
             }
 
-            if (confirm('Deseja submeter este plano para a aprovação final da Presidência?')) {
+            if (confirm('Deseja submeter este plano para a apreciação e aprovação do Chefe de Departamento?')) {
                 const res = await fetch('index.php?api=plano_estado', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ plano_id: planoData.id, estado: 'Submetido' })
                 });
                 const data = await res.json();
-                alert(data.message || 'Plano submetido com sucesso para a Presidência!');
+                alert(data.message || 'Plano submetido com sucesso para o Chefe de Departamento!');
                 loadPlano(currentCursoId);
             }
         });
     }
 
-    if (btnAprovar) {
-        btnAprovar.addEventListener('click', async () => {
+    const btnAprovarDepto = document.getElementById('btn-aprovar-depto');
+    if (btnAprovarDepto) {
+        btnAprovarDepto.addEventListener('click', async () => {
             if (!planoData) return;
-            if (confirm('Como Presidência, deseja APROVAR definitivamente este plano de cobertura docente?')) {
+            const obs = prompt('Como Chefe de Departamento, insira o seu parecer/observações para a Presidência (opcional):');
+            if (obs !== null) {
                 const res = await fetch('index.php?api=plano_estado', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plano_id: planoData.id, estado: 'Aprovado' })
+                    body: JSON.stringify({ plano_id: planoData.id, estado: 'Aprovado pelo Departamento', observacoes: obs })
                 });
                 const data = await res.json();
-                alert(data.message || 'Plano Aprovado pela Presidência!');
+                alert(data.message || 'Plano Aprovado pelo Chefe de Departamento!');
+                loadPlano(currentCursoId);
+            }
+        });
+    }
+
+    const btnValidarPR = document.getElementById('btn-validar-pr');
+    if (btnValidarPR) {
+        btnValidarPR.addEventListener('click', async () => {
+            if (!planoData) return;
+            if (confirm('Como Presidência, deseja VALIDAR definitivamente este plano de cobertura docente?')) {
+                const res = await fetch('index.php?api=plano_estado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plano_id: planoData.id, estado: 'Validado' })
+                });
+                const data = await res.json();
+                alert(data.message || 'Plano Validado com sucesso pela Presidência!');
                 loadPlano(currentCursoId);
             }
         });
@@ -554,8 +598,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnDevolver) {
         btnDevolver.addEventListener('click', async () => {
             if (!planoData) return;
-            const obs = prompt('Insira o motivo da recusa / devolução do plano ao Coordenador de Curso:');
-            if (obs !== null) {
+            const obs = prompt('Insira o motivo da recusa / devolução do plano para retificação:');
+            if (obs !== null && obs.trim() !== '') {
                 const res = await fetch('index.php?api=plano_estado', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

@@ -122,6 +122,11 @@ class PlanoModel {
             $params[':parecer'] = $data['parecer'];
         }
 
+        if (array_key_exists('decisao_aprovacao', $data)) {
+            $fields[] = "decisao_aprovacao = :decisao_aprovacao";
+            $params[':decisao_aprovacao'] = $data['decisao_aprovacao'];
+        }
+
         if (array_key_exists('observacoes', $data)) {
             $fields[] = "observacoes = :obs";
             $params[':obs'] = $data['observacoes'];
@@ -426,6 +431,75 @@ class PlanoModel {
         }
 
         return $rows;
+    }
+
+    public function aprovarPeloDepartamento(int $planoId, int $chefeDeptoId, ?string $parecer = null): bool {
+        $stmt = $this->db->prepare("
+            UPDATE planos_cobertura
+            SET estado = 'Aprovado pelo Departamento',
+                chefe_depto_id = ?,
+                data_aprovacao_depto = NOW(),
+                parecer_depto = ?
+            WHERE id = ?
+        ");
+        $success = $stmt->execute([$chefeDeptoId, $parecer, $planoId]);
+
+        if ($success) {
+            require_once __DIR__ . '/../helpers/Notification.php';
+            Notification::add($planoId, 'Aprovado pelo Departamento', $parecer);
+        }
+        return $success;
+    }
+
+    public function validarPelaPresidencia(int $planoId, int $presidenteId, ?string $parecer = null): bool {
+        $stmt = $this->db->prepare("
+            UPDATE planos_cobertura
+            SET estado = 'Validado',
+                presidente_id = ?,
+                data_validacao_pr = NOW(),
+                parecer_pr = ?
+            WHERE id = ?
+        ");
+        $success = $stmt->execute([$presidenteId, $parecer, $planoId]);
+
+        if ($success) {
+            require_once __DIR__ . '/../helpers/Notification.php';
+            Notification::add($planoId, 'Validado', $parecer);
+        }
+        return $success;
+    }
+
+    public function submeterPlano(int $planoId, int $utilizadorId): bool {
+        $stmt = $this->db->prepare("
+            UPDATE planos_cobertura
+            SET estado = 'Submetido',
+                criado_por = ?,
+                data_submissao = NOW()
+            WHERE id = ?
+        ");
+        $success = $stmt->execute([$utilizadorId, $planoId]);
+
+        if ($success) {
+            require_once __DIR__ . '/../helpers/Notification.php';
+            Notification::add($planoId, 'Submetido', 'Plano submetido para apreciação do Chefe de Departamento.');
+        }
+        return $success;
+    }
+
+    public function devolverPlano(int $planoId, int $utilizadorId, ?string $parecer = null): bool {
+        $stmt = $this->db->prepare("
+            UPDATE planos_cobertura
+            SET estado = 'Devolvido',
+                observacoes = ?
+            WHERE id = ?
+        ");
+        $success = $stmt->execute([$parecer, $planoId]);
+
+        if ($success) {
+            require_once __DIR__ . '/../helpers/Notification.php';
+            Notification::add($planoId, 'Devolvido', $parecer);
+        }
+        return $success;
     }
 
     public function getHistoricoAprovacoes(int $planoId): array {

@@ -34,6 +34,7 @@ $currentRole = $currentUser['perfil'] ?? 'coordenador';
     <span style="font-size:12px;font-weight:600">Perfil Ativo:</span>
     <select id="role-select" onchange="window.switchRole(this.value)">
       <option value="coordenador" <?= $currentRole === 'coordenador' ? 'selected' : '' ?>>Coordenador de Curso</option>
+      <option value="chefe_departamento" <?= $currentRole === 'chefe_departamento' ? 'selected' : '' ?>>Chefe de Departamento</option>
       <option value="gestor_academico" <?= $currentRole === 'gestor_academico' ? 'selected' : '' ?>>Gestão Académica</option>
       <option value="grh" <?= $currentRole === 'grh' ? 'selected' : '' ?>>GRH</option>
       <option value="presidente" <?= $currentRole === 'presidente' ? 'selected' : '' ?>>Presidência</option>

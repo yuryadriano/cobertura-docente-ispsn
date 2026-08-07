@@ -267,6 +267,13 @@ class Auth {
                 'nav' => ['painel', 'cobertura', 'turmas', 'curriculo', 'docentes'],
                 'desc' => 'Preenche a Cobertura Docente, gere as Turmas e o Currículo do seu curso'
             ],
+            'chefe_departamento' => [
+                'nome' => 'Chefe de Departamento',
+                'user' => 'Chefe de Depto.',
+                'scope' => 'geral',
+                'nav' => ['painel', 'dashboard', 'cobertura', 'turmas', 'curriculo', 'docentes', 'cv', 'aprov'],
+                'desc' => 'Apreciação e Aprovação dos Planos de Cobertura Docente'
+            ],
             'gestor_academico' => [
                 'nome' => 'Gestão Académica',
                 'user' => 'Gestão Académica',

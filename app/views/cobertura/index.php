@@ -22,8 +22,10 @@ window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <button onclick="window.exportarPDFOficial()" class="btn ghost" style="font-weight:700; border-color:var(--blue); color:var(--blue); padding:6px 12px; font-size:12px;" title="Relatório Oficial em PDF com Assinaturas">📄 PDF Oficial</button>
         <button onclick="window.exportarExcelOficial()" class="btn ghost" style="font-weight:700; border-color:#1E8449; color:#1E8449; padding:6px 12px; font-size:12px;" title="Descarregar Ficheiro Excel/CSV Estruturado">📊 Excel (CSV)</button>
-        <button id="btn-submeter" class="btn btn-p" style="display:none; font-size:12px; padding:6px 14px;">Submeter para Aprovação</button>
-        <button id="btn-aprovar" class="btn btn-ok" style="display:none; font-size:12px; padding:6px 14px;">Aprovar Plano (Presidência)</button>
+        <button id="btn-submeter" class="btn btn-p" style="display:none; font-size:12px; padding:6px 14px;">📤 Submeter ao Chefe de Depto</button>
+        <button id="btn-aprovar-depto" class="btn btn-ok" style="display:none; font-size:12px; padding:6px 14px; background:#1E8449;">✅ Aprovar Plano (Chefe de Depto)</button>
+        <button id="btn-validar-pr" class="btn btn-ok" style="display:none; font-size:12px; padding:6px 14px; background:#1F4E79;">🛡️ Validar Plano (Presidência)</button>
+        <button id="btn-devolver" class="btn btn-bad" style="display:none; font-size:12px; padding:6px 14px; background:#C0392B;">↩️ Devolver para Retificação</button>
     </div>
 </div>
 
@@ -105,12 +107,13 @@ window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
                         <th style="padding:10px 8px; font-size:11px; min-width:130px;">Justificação</th>
                         <th style="padding:10px 8px; font-size:11px; min-width:110px;">Regime</th>
                         <th style="padding:10px 8px; font-size:11px;">Parecer</th>
-                        <th style="padding:10px 8px; font-size:11px; width:120px;">Replicar</th>
+                        <th style="padding:10px 8px; font-size:11px; width:110px;">Replicar</th>
+                        <th style="padding:10px 8px; font-size:11px; min-width:170px; color:#1E8449; font-weight:700;">Aprovação / Decisão</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-linhas">
                     <tr>
-                        <td colspan="12" style="text-align:center; padding:30px; color:var(--mut);">Carregando cobertura docente...</td>
+                        <td colspan="13" style="text-align:center; padding:30px; color:var(--mut);">Carregando cobertura docente...</td>
                     </tr>
                 </tbody>
             </table>
