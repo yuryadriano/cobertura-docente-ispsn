@@ -108,7 +108,7 @@ class Auth {
         $stmt->execute([$fullEmail]);
         $user = $stmt->fetch();
 
-        // 2. Se não encontrar, tenta pesquisar por prefixo de e-mail ou nome
+        // 2. Se não encontrar por e-mail exato, tenta por prefixo de e-mail ou nome
         if (!$user) {
             $prefix = explode('@', $email)[0];
             $stmtPrefix = $db->prepare("SELECT * FROM utilizadores WHERE (LOWER(email) LIKE ? OR LOWER(nome) LIKE ?) AND activo = 1 LIMIT 1");
@@ -116,20 +116,20 @@ class Auth {
             $user = $stmtPrefix->fetch();
         }
 
-        if (!$user) {
-            $superAdmins = defined('SUPER_ADMIN_EMAILS') ? SUPER_ADMIN_EMAILS : ['evaristo.adriano@ispsn.org', 'david.boio@ispsn.org'];
-            if (in_array($fullEmail, array_map('strtolower', $superAdmins))) {
-                // Auto-registar Super Admin com perfil 'admin' pendente de Primeiro Acesso
-                $nomePartes = explode('.', explode('@', $fullEmail)[0]);
-                $nomeFormat = implode(' ', array_map('ucfirst', $nomePartes));
-                try {
-                    $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'admin', NULL, 1)");
-                    $stmtIns->execute([$nomeFormat, $fullEmail]);
-                    $stmt->execute([$fullEmail]);
-                    $user = $stmt->fetch();
-                } catch (\Exception $e) {
-                    // Ignorar duplicação caso ocorra em concorrência
-                }
+        // 3. Auto-provisionar qualquer e-mail @ispsn.org no Primeiro Acesso para nunca dar Acesso Não Autorizado
+        if (!$user && (strpos($fullEmail, '@ispsn.org') !== false || strpos($email, '@') === false)) {
+            $prefix = explode('@', $fullEmail)[0];
+            $nomePartes = explode('.', $prefix);
+            $nomeFormat = implode(' ', array_map('ucfirst', $nomePartes));
+            try {
+                $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'coordenador', 1, 1)");
+                $stmtIns->execute([$nomeFormat, $fullEmail]);
+                $stmt->execute([$fullEmail]);
+                $user = $stmt->fetch();
+            } catch (\Exception $e) {
+                // Em caso de concorrência, consultar novamente
+                $stmt->execute([$fullEmail]);
+                $user = $stmt->fetch();
             }
         }
 
