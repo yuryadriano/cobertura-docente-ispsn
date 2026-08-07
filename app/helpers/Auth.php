@@ -334,9 +334,9 @@ class Auth {
 
     public static function hasRole($roles): bool {
         if (!self::check()) return false;
-        if (self::isSuperAdmin()) return true;
-
         $userRole = $_SESSION['user']['perfil'] ?? '';
+        if ($userRole === 'admin') return true;
+
         if (is_array($roles)) {
             return in_array($userRole, $roles);
         }
@@ -345,7 +345,8 @@ class Auth {
 
     public static function isAllowedPage(string $page): bool {
         if (!self::check()) return false;
-        if (self::isSuperAdmin()) return true;
+        $userRole = $_SESSION['user']['perfil'] ?? '';
+        if ($userRole === 'admin') return true;
 
         $info = self::roleInfo();
         return in_array($page, $info['nav']);
@@ -353,8 +354,6 @@ class Auth {
 
     public static function canEditCourse(int $cursoId): bool {
         if (!self::check()) return false;
-        if (self::isSuperAdmin()) return true;
-
         $user = $_SESSION['user'];
         if (in_array($user['perfil'], ['admin', 'gestor_academico'])) {
             return true;
@@ -367,9 +366,8 @@ class Auth {
 
     public static function canApprove(): bool {
         if (!self::check()) return false;
-        if (self::isSuperAdmin()) return true;
-
-        return in_array($_SESSION['user']['perfil'] ?? '', ['presidente', 'admin']);
+        $userRole = $_SESSION['user']['perfil'] ?? '';
+        return in_array($userRole, ['presidente', 'chefe_departamento', 'admin']);
     }
 
     public static function canEditDoc(): bool {

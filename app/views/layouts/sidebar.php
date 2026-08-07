@@ -6,9 +6,6 @@
 $info = Auth::roleInfo();
 $currentUser = Auth::user();
 $allowedNav = $info['nav'];
-if (Auth::isSuperAdmin() && !in_array('config', $allowedNav)) {
-    $allowedNav[] = 'config';
-}
 $currentPage = $currentPage ?? 'painel';
 
 $svgIcons = [
