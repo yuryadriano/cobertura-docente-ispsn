@@ -271,19 +271,20 @@ unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_inf
       <div class="form-group">
         <label class="form-label" for="login-email">E-mail Corporativo</label>
         <div class="input-wrap">
-          <input type="email" id="login-email" name="email" class="form-input no-btn" placeholder="ex: nome@ispsn.org" value="<?= htmlspecialchars($resetEmail) ?>" required autofocus>
+          <input type="email" id="login-email" name="email" class="form-input no-btn" placeholder="ex: nome@ispsn.org" value="<?= htmlspecialchars($_GET['email'] ?? $resetEmail) ?>" required autofocus>
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label" for="login-password">Palavra-Passe</label>
         <div class="input-wrap">
-          <input type="password" id="login-password" name="password" class="form-input" placeholder="••••••••" required>
+          <input type="password" id="login-password" name="password" class="form-input" placeholder="••••••••">
           <button type="button" class="toggle-btn" onclick="togglePass('login-password', this, event)">Mostrar</button>
         </div>
       </div>
 
-      <div class="form-extra">
+      <div class="form-extra" style="display:flex; justify-content:space-between; align-items:center;">
+        <a href="#" class="forgot-link" onclick="switchMode('activate'); return false;" style="color:#166534; font-weight:700;">🔑 Primeiro Acesso?</a>
         <a href="#" class="forgot-link" onclick="switchMode('forgot'); return false;">Esqueceu a senha?</a>
       </div>
 

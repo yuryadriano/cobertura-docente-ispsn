@@ -60,8 +60,8 @@ class Auth {
      */
     public static function attempt(string $email, string $password): array {
         $email = trim(strtolower($email));
-        if (empty($email) || empty($password)) {
-            return ['success' => false, 'message' => 'Por favor preencha o e-mail e a palavra-passe.'];
+        if (empty($email)) {
+            return ['success' => false, 'message' => 'Por favor introduza o seu e-mail corporativo.'];
         }
 
         $db = Database::getInstance();
@@ -70,16 +70,20 @@ class Auth {
         $user = $stmt->fetch();
 
         if (!$user) {
-            return ['success' => false, 'message' => 'E-mail corporativo não encontrado ou conta inativa.'];
+            return ['success' => false, 'message' => 'E-mail corporativo não encontrado ou conta inativa na instituição.'];
         }
 
-        // Se a conta existe mas a senha é NULL ou vazia, o utilizador deve redefinir/definir a palavra-passe
+        // Se a conta existe mas a palavra-passe ainda é NULL ou vazia (Primeiro Acesso)
         if (is_null($user['senha_hash']) || $user['senha_hash'] === '') {
             return [
                 'success' => false,
                 'is_first_access' => true,
-                'message' => 'Esta conta ainda não possui palavra-passe registrada. Por favor clique em "Esqueceu a senha?" para definir a sua palavra-passe.'
+                'message' => 'Conta ativa por pré-registo. Por favor defina a sua palavra-passe de Primeiro Acesso.'
             ];
+        }
+
+        if (empty($password)) {
+            return ['success' => false, 'message' => 'Por favor introduza a sua palavra-passe.'];
         }
 
         if (password_verify($password, $user['senha_hash'])) {
