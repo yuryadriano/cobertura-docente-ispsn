@@ -30,6 +30,15 @@ window.switchAnoLectivo = async (ano) => {
     } catch (err) {
         alert('Erro de comunicação ao alterar o ano lectivo.');
     }
+window.showToast = (msg, isSuccess = true) => {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.background = isSuccess ? '#1E8449' : '#C0392B';
+    t.classList.add('show');
+    setTimeout(() => {
+        t.classList.remove('show');
+    }, 3000);
 };
 </script>
 <script src="assets/js/cobertura.js?v=<?= time() ?>"></script>

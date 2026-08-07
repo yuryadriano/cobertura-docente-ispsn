@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td style="min-width:120px"><select ${disabledAttr} onchange="window.updateLinhaField(${l.id}, 'parecer', this.value)">${parSel}</select></td>
                         <td style="width:110px">${btnReplicar}</td>
                         <td style="min-width:165px">
-                            <select ${disabledAttr} style="font-weight:700; color:${decColor}; background:#F8FAFC; border:1px solid #CBD5E1; border-radius:6px; padding:4px 8px; font-size:12px;" onchange="window.updateLinhaField(${l.id}, 'decisao_aprovacao', this.value)">
+                            <select ${disabledAttr} style="font-weight:700; color:${decColor}; background:${decVal==='Aprovar'?'#F0FDF4':'#FEF2F2'}; border:1px solid ${decVal==='Aprovar'?'#86EFAC':'#FCA5A5'}; border-radius:6px; padding:4px 8px; font-size:12px;" onchange="window.updateLinhaField(${l.id}, 'decisao_aprovacao', this.value, this)">
                                 ${decSel}
                             </select>
                         </td>
@@ -519,20 +519,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.updateLinhaField = async (linhaId, field, val) => {
+    window.updateLinhaField = async (linhaId, field, val, elem = null) => {
         try {
             const body = { linha_id: linhaId };
             body[field] = val;
-            await fetch('index.php?api=linha_salvar', {
+
+            if (field === 'decisao_aprovacao' && ['Recusar', 'Solicitar substituição'].includes(val)) {
+                const motivo = prompt(`Motivo / Justificação para [${val}] nesta disciplina (opcional):`);
+                if (motivo !== null && motivo.trim() !== '') {
+                    body['observacoes'] = motivo;
+                }
+            }
+
+            const res = await fetch('index.php?api=linha_salvar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
-            // Actualizar campo em memória para manter consistência
+            const data = await res.json();
+
+            // Atualizar modelo em memória
             const idx = linhasData.findIndex(l => l.id == linhaId);
-            if (idx !== -1) linhasData[idx][field] = val;
+            if (idx !== -1) {
+                linhasData[idx][field] = val;
+                if (body['observacoes']) linhasData[idx]['observacoes'] = body['observacoes'];
+            }
+
+            // Atualizar estilo e cor do elemento dinamicamente
+            if (elem && field === 'decisao_aprovacao') {
+                if (val === 'Aprovar') {
+                    elem.style.color = '#166534';
+                    elem.style.background = '#F0FDF4';
+                    elem.style.borderColor = '#86EFAC';
+                } else {
+                    elem.style.color = '#C0392B';
+                    elem.style.background = '#FEF2F2';
+                    elem.style.borderColor = '#FCA5A5';
+                }
+            }
+
+            if (window.showToast) {
+                const msg = field === 'decisao_aprovacao' ? `Decisão atualizada: ${val}` : 'Campo atualizado com sucesso';
+                window.showToast(data.message || msg, true);
+            }
         } catch (err) {
-            alert('Erro ao atualizar campo.');
+            if (window.showToast) {
+                window.showToast('Erro ao atualizar deliberação.', false);
+            } else {
+                alert('Erro ao atualizar deliberação.');
+            }
         }
     };
 
