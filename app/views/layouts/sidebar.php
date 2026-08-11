@@ -41,7 +41,19 @@ $userInitials = strtoupper(substr($userName, 0, 2));
       <span style="font-size:14px;">🎯</span>
       <div>
         <div style="font-size:10px; color:var(--mut); text-transform:uppercase;">Âmbito de Acesso</div>
-        <div><?= $info['scope'] === 'curso' ? 'Curso: Direito' : 'Todos os Cursos' ?></div>
+        <?php
+        $scopeDisplay = 'Todos os Cursos';
+        if ($info['scope'] === 'curso' && !empty($currentUser['curso_id'])) {
+            $dbScope = Database::getInstance();
+            $stmtScope = $dbScope->prepare("SELECT nome FROM cursos WHERE id = ? LIMIT 1");
+            $stmtScope->execute([$currentUser['curso_id']]);
+            $cursoNome = $stmtScope->fetchColumn();
+            if ($cursoNome) {
+                $scopeDisplay = 'Curso: ' . $cursoNome;
+            }
+        }
+        ?>
+        <div><?= htmlspecialchars($scopeDisplay) ?></div>
       </div>
     </div>
     

@@ -70,6 +70,13 @@ class Auth {
             return ['success' => false, 'message' => 'Acesso não autorizado. O seu e-mail ainda não possui um perfil ou área atribuída pelo Administrador.'];
         }
 
+        if (empty($user['activo'])) {
+            if (empty($user['curso_id'])) {
+                return ['success' => false, 'message' => 'Conta criada. Aguarde ativação e atribuição de curso pelo Administrador.'];
+            }
+            return ['success' => false, 'message' => 'Acesso suspenso. Esta conta encontra-se inativa no sistema.'];
+        }
+
         // Se a conta existe e foi atribuída pelo Admin, mas a palavra-passe ainda é NULL (Primeiro Acesso)
         if (is_null($user['senha_hash']) || $user['senha_hash'] === '') {
             return [
@@ -104,25 +111,25 @@ class Auth {
 
         $db = Database::getInstance();
         // 1. Pesquisa exata por e-mail completo
-        $stmt = $db->prepare("SELECT * FROM utilizadores WHERE LOWER(email) = ? AND activo = 1 LIMIT 1");
+        $stmt = $db->prepare("SELECT * FROM utilizadores WHERE LOWER(email) = ? LIMIT 1");
         $stmt->execute([$fullEmail]);
         $user = $stmt->fetch();
 
         // 2. Se não encontrar por e-mail exato, tenta por prefixo de e-mail ou nome
         if (!$user) {
             $prefix = explode('@', $email)[0];
-            $stmtPrefix = $db->prepare("SELECT * FROM utilizadores WHERE (LOWER(email) LIKE ? OR LOWER(nome) LIKE ?) AND activo = 1 LIMIT 1");
+            $stmtPrefix = $db->prepare("SELECT * FROM utilizadores WHERE (LOWER(email) LIKE ? OR LOWER(nome) LIKE ?) LIMIT 1");
             $stmtPrefix->execute(["%{$prefix}%", "%{$prefix}%"]);
             $user = $stmtPrefix->fetch();
         }
 
-        // 3. Auto-provisionar qualquer e-mail @ispsn.org no Primeiro Acesso para nunca dar Acesso Não Autorizado
+        // 3. Auto-provisionar e-mail @ispsn.org não reconhecido como INATIVO e sem curso (curso_id = NULL, activo = 0)
         if (!$user && (strpos($fullEmail, '@ispsn.org') !== false || strpos($email, '@') === false)) {
             $prefix = explode('@', $fullEmail)[0];
             $nomePartes = explode('.', $prefix);
             $nomeFormat = implode(' ', array_map('ucfirst', $nomePartes));
             try {
-                $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'coordenador', 1, 1)");
+                $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'coordenador', NULL, 0)");
                 $stmtIns->execute([$nomeFormat, $fullEmail]);
                 $stmt->execute([$fullEmail]);
                 $user = $stmt->fetch();
