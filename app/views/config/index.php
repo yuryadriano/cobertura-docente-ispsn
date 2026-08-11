@@ -241,14 +241,17 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                         <td><strong><?= htmlspecialchars($u['nome']) ?></strong></td>
                         <td><span style="font-size:12.5px; color:var(--mut);"><?= htmlspecialchars($u['email']) ?></span></td>
                         <td>
+                            <?php $p = trim(strtolower($u['perfil'] ?? '')); ?>
                             <select id="usr-perfil-<?= $u['id'] ?>" style="padding:4px 8px; border-radius:6px; font-weight:600; font-size:12.5px; border:1px solid var(--line); width:100%;" <?= !$isAdmin ? 'disabled' : '' ?>>
-                                <option value="coordenador" <?= $u['perfil'] === 'coordenador' ? 'selected' : '' ?>>Coordenador de Curso</option>
-                                <option value="chefe_departamento" <?= $u['perfil'] === 'chefe_departamento' ? 'selected' : '' ?>>Chefe de Departamento</option>
-                                <option value="gestor_academico" <?= $u['perfil'] === 'gestor_academico' ? 'selected' : '' ?>>Gestão Académica</option>
-                                <option value="grh" <?= $u['perfil'] === 'grh' ? 'selected' : '' ?>>GRH</option>
-                                <option value="presidente" <?= $u['perfil'] === 'presidente' ? 'selected' : '' ?>>Presidente</option>
-                                <option value="secretario_geral" <?= $u['perfil'] === 'secretario_geral' ? 'selected' : '' ?>>Secretário-Geral</option>
-                                <option value="admin" <?= $u['perfil'] === 'admin' ? 'selected' : '' ?>>Administração</option>
+                                <option value="" <?= empty($p) ? 'selected' : '' ?>>-- Perfil Não Definido --</option>
+                                <option value="coordenador" <?= $p === 'coordenador' ? 'selected' : '' ?>>Coordenador de Curso</option>
+                                <option value="chefe_departamento" <?= $p === 'chefe_departamento' ? 'selected' : '' ?>>Chefe de Departamento</option>
+                                <option value="gestor_academico" <?= $p === 'gestor_academico' ? 'selected' : '' ?>>Gestão Académica</option>
+                                <option value="grh" <?= $p === 'grh' ? 'selected' : '' ?>>GRH (Recursos Humanos)</option>
+                                <option value="presidente" <?= $p === 'presidente' ? 'selected' : '' ?>>Presidente</option>
+                                <option value="secretario_geral" <?= $p === 'secretario_geral' ? 'selected' : '' ?>>Secretário-Geral</option>
+                                <option value="docente" <?= $p === 'docente' ? 'selected' : '' ?>>Corpo Docente</option>
+                                <option value="admin" <?= $p === 'admin' ? 'selected' : '' ?>>Administração</option>
                             </select>
                         </td>
                         <td>
