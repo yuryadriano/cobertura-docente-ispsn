@@ -512,8 +512,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ plano_id: planoId, disciplina_id: disciplinaId, docente_id: docenteId })
             });
             const data = await res.json();
-            alert(data.message || 'Docente atribuído a esta disciplina em todas as turmas do ano!');
-            loadPlano(currentCursoId);
+            if (data.success) {
+                alert(data.message || 'Docente atribuído a esta disciplina em todas as turmas do ano!');
+                loadPlano(currentCursoId);
+            } else {
+                alert('Erro: ' + (data.error || data.message || 'Falha ao replicar atribuição por turmas.'));
+            }
         } catch (err) {
             alert('Erro ao replicar atribuição por turmas.');
         }
@@ -588,8 +592,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ plano_id: planoData.id, estado: 'Submetido' })
                 });
                 const data = await res.json();
-                alert(data.message || 'Plano submetido com sucesso para o Chefe de Departamento!');
-                loadPlano(currentCursoId);
+                if (data.success) {
+                    alert(data.message || 'Plano submetido com sucesso para o Chefe de Departamento!');
+                    loadPlano(currentCursoId);
+                } else {
+                    alert('Erro: ' + (data.error || data.message || 'Falha ao submeter plano.'));
+                }
             }
         });
     }
@@ -606,8 +614,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ plano_id: planoData.id, estado: 'Aprovado pelo Departamento', observacoes: obs })
                 });
                 const data = await res.json();
-                alert(data.message || 'Plano Aprovado pelo Chefe de Departamento!');
-                loadPlano(currentCursoId);
+                if (data.success) {
+                    alert(data.message || 'Plano Aprovado pelo Chefe de Departamento!');
+                    loadPlano(currentCursoId);
+                } else {
+                    alert('Erro: ' + (data.error || data.message || 'Falha ao aprovar plano.'));
+                }
             }
         });
     }
@@ -624,8 +636,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ plano_id: planoData.id, estado: 'Devolvido', observacoes: obs })
                 });
                 const data = await res.json();
-                alert(data.message || 'Plano Recusado pelo Chefe de Departamento.');
-                loadPlano(currentCursoId);
+                if (data.success) {
+                    alert(data.message || 'Plano Recusado pelo Chefe de Departamento.');
+                    loadPlano(currentCursoId);
+                } else {
+                    alert('Erro: ' + (data.error || data.message || 'Falha ao recusar plano.'));
+                }
             }
         });
     }
@@ -641,8 +657,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ plano_id: planoData.id, estado: 'Validado' })
                 });
                 const data = await res.json();
-                alert(data.message || 'Plano Validado com sucesso pela Presidência!');
-                loadPlano(currentCursoId);
+                if (data.success) {
+                    alert(data.message || 'Plano Validado com sucesso pela Presidência!');
+                    loadPlano(currentCursoId);
+                } else {
+                    alert('Erro: ' + (data.error || data.message || 'Falha ao validar plano.'));
+                }
             }
         });
     }

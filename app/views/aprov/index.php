@@ -130,8 +130,12 @@ window.aprovarCurso = async (cursoId, estado) => {
             body: JSON.stringify({ plano_id: cursoId, estado: estado, observacoes: obs })
         });
         const data = await res.json();
-        alert(data.message || 'Estado alterado com sucesso!');
-        location.reload();
+        if (data.success) {
+            alert(data.message || 'Estado alterado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.error || data.message || 'Falha ao alterar estado do curso.'));
+        }
     }
 };
 

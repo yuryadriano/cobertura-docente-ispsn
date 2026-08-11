@@ -90,10 +90,10 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
         <!-- FORMULÁRIO DE ATIVAÇÃO DE PERFIL DE DOCENTE DA INSTITUIÇÃO -->
         <div id="box-ativar-docente" style="display:none; background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:10px; padding:18px; margin-bottom:20px;">
             <h4 style="margin:0 0 8px; color:#166534; font-size:14px; display:flex; align-items:center; gap:8px;">
-                🎓 Ativar Perfil &amp; Acesso a partir do Corpo Docente
+                🎓 Ativar Perfil &amp; Acesso para CORPO DOCENTE (Professores de Curso)
             </h4>
             <p style="font-size:12.5px; color:#15803D; margin-bottom:14px; line-height:1.5;">
-                Selecione um professor da lista cadastrada no sistema para lhe atribuir um perfil funcional (ex.: <b>Secretário-Geral</b>, <b>Coordenador de Curso</b>, <b>Presidência</b>, etc.). O utilizador poderá aceder no <b>Primeiro Acesso</b> definindo a sua palavra-passe com o e-mail corporativo.
+                <b>Utilize esta opção exclusivamente para professores lecionantes cadastrados no catálogo docente.</b> Selecione o docente da lista para lhe conceder acesso ao sistema com o e-mail corporativo.
             </p>
             <form onsubmit="window.ativarPerfilDocente(event)">
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:14px;">
@@ -173,9 +173,14 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
             </form>
         </div>
 
-        <!-- FORMULÁRIO RÁPIDO DE NOVO UTILIZADOR -->
+        <!-- FORMULÁRIO RÁPIDO DE NOVO UTILIZADOR INSTITUCIONAL -->
         <div id="box-novo-utilizador" style="display:none; background:#f0f5fb; border:1px solid #cbd5e1; border-radius:10px; padding:18px; margin-bottom:20px;">
-            <h4 style="margin:0 0 12px; color:var(--blue);">🔑 Pré-Registar Novo Utilizador Individual</h4>
+            <h4 style="margin:0 0 8px; color:var(--blue); font-size:14px; display:flex; align-items:center; gap:8px;">
+                🔑 Cadastrar Novo Utilizador de Sistema (Funcionários Institucionais &amp; Perfis Globais: GRH, Sec. Geral, Presidência, Admin)
+            </h4>
+            <p style="font-size:12.5px; color:var(--mut); margin-bottom:14px; line-height:1.5;">
+                <b>Utilize esta opção para cadastrar novos funcionários administrativos e contas corporativas sem vínculo a um curso específico.</b> O utilizador será pré-cadastrado com estado de Primeiro Acesso.
+            </p>
             <form onsubmit="window.criarUtilizador(event)">
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:14px;">
                     <div>
@@ -485,8 +490,12 @@ window.salvarUser = async (userId) => {
             })
         });
         const data = await res.json();
-        alert(data.message || 'Utilizador atualizado!');
-        location.reload();
+        if (data.success) {
+            alert(data.message || 'Utilizador atualizado!');
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.error || data.message || 'Falha ao atualizar utilizador.'));
+        }
     } catch (err) {
         alert('Erro ao atualizar utilizador.');
     }
@@ -511,8 +520,12 @@ window.alternarEstadoUser = async (userId, novoEstado) => {
             })
         });
         const data = await res.json();
-        alert(data.message || `Utilizador ${novoEstado === 1 ? 'ativado' : 'desativado'} com sucesso!`);
-        location.reload();
+        if (data.success) {
+            alert(data.message || `Utilizador ${novoEstado === 1 ? 'ativado' : 'desativado'} com sucesso!`);
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.error || data.message || 'Falha ao alterar estado do utilizador.'));
+        }
     } catch (err) {
         alert('Erro ao alterar estado do utilizador.');
     }
@@ -606,10 +619,14 @@ window.criarUtilizador = async (e) => {
             body: JSON.stringify({ nome, email, perfil, curso_id })
         });
         const data = await res.json();
-        alert(data.message || 'Utilizador criado com sucesso!');
-        location.reload();
+        if (data.success) {
+            alert(data.message || 'Utilizador criado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.error || data.message || 'Falha ao criar utilizador.'));
+        }
     } catch (err) {
-        alert('Erro ao registar novo utilizador.');
+        alert('Erro de comunicação ao registar novo utilizador.');
     }
 };
 
@@ -654,8 +671,12 @@ window.importarUtilizadoresCSV = async (e) => {
                 body: JSON.stringify({ utilizadores })
             });
             const data = await res.json();
-            alert(data.message || `${utilizadores.length} utilizadores importados!`);
-            location.reload();
+            if (data.success) {
+                alert(data.message || `${utilizadores.length} utilizadores importados!`);
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.error || data.message || 'Falha ao importar utilizadores.'));
+            }
         } catch (err) {
             alert('Erro ao importar lista de utilizadores.');
         }
