@@ -42,9 +42,11 @@ $canApprove = Auth::canApprove();
                         <a href="index.php?page=relatorio_plano&curso_id=<?= $s['curso_id'] ?>" target="_blank" class="btn sm ghost" style="color:var(--blue); border-color:var(--blue);" title="Imprimir / PDF Oficial">📄 PDF</a>
                         <a href="index.php?api=exportar_excel&curso_id=<?= $s['curso_id'] ?>" class="btn sm ghost" style="color:#1E8449; border-color:#1E8449;" title="Descarregar Excel">📊 Excel</a>
                         
-                        <?php if (Auth::hasRole(['presidente', 'admin']) && $st !== 'Validado'): ?>
-                            <button class="btn sm btn-ok" style="background:#1F4E79;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Validado')">🛡️ Validar (Presidência)</button>
-                            <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">↩️ Devolver</button>
+                        <?php if (Auth::hasRole(['presidente', 'admin'])): ?>
+                            <?php if ($st !== 'Validado'): ?>
+                                <button class="btn sm btn-ok" style="background:#1F4E79;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Validado')">🛡️ Validar (Presidência)</button>
+                            <?php endif; ?>
+                            <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">↩️ Devolver / Reabrir</button>
                         <?php elseif (Auth::hasRole(['chefe_departamento']) && in_array($st, ['Submetido', 'Em Elaboração', 'Rascunho'])): ?>
                             <button class="btn sm btn-ok" style="background:#1E8449;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Aprovado pelo Departamento')">✅ Aprovar pelo Depto</button>
                             <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">↩️ Devolver</button>
