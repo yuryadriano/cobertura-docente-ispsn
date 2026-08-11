@@ -239,9 +239,31 @@ switch ($page) {
     case 'config':
         $title = 'Portal ISPSN · Configurações do Sistema';
         $db = Database::getInstance();
+        // Limpar utilizadores de teste fictícios da base de dados e assegurar conta do Super Admin David Boio
+        $db->exec("DELETE FROM utilizadores WHERE email IN ('bernardo.domingos@ispsn.org', 'maria.eugenia@ispsn.org', 'joao.silva@ispsn.org', 'antonio.costa@ispsn.org', 'manuel.ferreira@ispsn.org')");
+        $db->exec("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES ('David Boio', 'david.boio@ispsn.org', NULL, 'admin', NULL, 1) ON DUPLICATE KEY UPDATE perfil = 'admin', activo = 1");
+        
+        // Assegurar colunas e VIEW SQL do novo workflow de aprovação em 2 etapas
+        try {
+            $db->exec("ALTER TABLE linhas_cobertura ADD COLUMN decisao_aprovacao VARCHAR(100) DEFAULT 'Aprovar'");
+        } catch (\Throwable $e) {}
+
+        try {
+            $db->exec("ALTER TABLE planos_cobertura ADD COLUMN chefe_depto_id INT DEFAULT NULL");
+            $db->exec("ALTER TABLE planos_cobertura ADD COLUMN data_aprovacao_depto DATETIME DEFAULT NULL");
+            $db->exec("ALTER TABLE planos_cobertura ADD COLUMN parecer_depto TEXT DEFAULT NULL");
+            $db->exec("ALTER TABLE planos_cobertura ADD COLUMN presidente_id INT DEFAULT NULL");
+            $db->exec("ALTER TABLE planos_cobertura ADD COLUMN data_validacao_pr DATETIME DEFAULT NULL");
+            $db->exec("ALTER TABLE planos_cobertura ADD COLUMN parecer_pr TEXT DEFAULT NULL");
+            $db->exec("ALTER TABLE planos_cobertura MODIFY COLUMN estado VARCHAR(50) DEFAULT 'Rascunho'");
+            $db->exec("ALTER TABLE utilizadores MODIFY COLUMN perfil VARCHAR(50) NOT NULL");
+        } catch (\Throwable $e) {}
+
+        try {
+            $db->exec("CREATE OR REPLACE VIEW `vw_linhas_cobertura_detalhada` AS SELECT lc.id AS id, lc.id AS linha_id, lc.plano_id, lc.disciplina_id, lc.turma_id, lc.docente_id, lc.conformidade, lc.justificacao, lc.regime, lc.categoria_carreira, lc.parecer, COALESCE(lc.decisao_aprovacao, 'Aprovar') AS decisao_aprovacao, lc.observacoes, lc.updated_at, pc.curso_id, pc.ano_lectivo, pc.estado AS estado_plano, d.nome AS disciplina_nome, d.ano_curricular, d.semestre, d.carga_horaria_semanal, d.creditos, t.designacao AS turma_nome, t.sumarios_registados, t.sumarios_previstos, t.programa_carregado, t.dosificacao_carregada, t.notas_no_prazo, t.inquerito_media, doc.nome AS docente_nome, doc.grau_academico AS docente_grau, doc.especialidade AS docente_especialidade, doc.tem_inaarees, doc.tem_agregacao_pedag FROM `linhas_cobertura` lc JOIN `planos_cobertura` pc ON lc.plano_id = pc.id JOIN `disciplinas` d ON lc.disciplina_id = d.id LEFT JOIN `turmas` t ON lc.turma_id = t.id LEFT JOIN `docentes` doc ON lc.docente_id = doc.id");
+        } catch (\Throwable $e) {}
 
         $utilizadores = $db->query("SELECT u.*, c.nome as curso_nome FROM utilizadores u LEFT JOIN cursos c ON u.curso_id = c.id ORDER BY u.id ASC")->fetchAll();
-
         $cursos = $cursoModel->getAll();
         $docentes = $docenteModel->getAll();
         $historico = $db->query("SELECT h.*, p.ano_lectivo, c.nome as curso_nome, u.nome as utilizador_nome FROM historico_aprovacoes h JOIN planos_cobertura p ON h.plano_id = p.id JOIN cursos c ON p.curso_id = c.id JOIN utilizadores u ON h.utilizador_id = u.id ORDER BY h.created_at DESC LIMIT 10")->fetchAll();

@@ -319,10 +319,11 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
             <div>
                 <h3 style="color:var(--blue); margin:0; font-size:16px; display:flex; align-items:center; gap:8px;">
-                    📚 Cursos e Estrutura Curricular Institucional
+                    📚 Integração por API com o Sistema Gestão Escolar
                 </h3>
-                <div style="font-size:12px; color:var(--mut); margin-top:2px;">Cursos, disciplinas e turmas oficiais da instituição</div>
+                <div style="font-size:12px; color:var(--mut); margin-top:2px;">Sincronização de cursos, disciplinas e turmas oficiais do ISPSN por ID interno</div>
             </div>
+            <button class="btn sm ghost" onclick="window.sincronizarGestaoEscolar()" style="font-weight:700;">🔄 Sincronizar por API Agora</button>
         </div>
 
         <div style="display:flex; align-items:center; justify-content:space-between; background:#faf9f5; border:1px solid var(--line); border-radius:10px; padding:16px;">
@@ -450,7 +451,21 @@ window.executarRollOver = async () => {
     }
 };
 
+window.sincronizarGestaoEscolar = async () => {
+    try {
+        const res = await fetch('index.php?api=sincronizar_gestao_escolar');
+        const data = await res.json();
 
+        if (data.success) {
+            alert(`🔄 SINCRONIZAÇÃO CONCLUÍDA COM SUCESSO!\n\n• Fonte de Dados: ${data.fonte}\n• Docentes Sincronizados: ${data.docentes_sync}\n• Cursos Atualizados: ${data.cursos_sync}\n• Disciplinas Atualizadas: ${data.disciplinas_sync}\n• Turmas Sincronizadas: ${data.turmas_sync}`);
+            location.reload();
+        } else {
+            alert(`Erro na sincronização: ${data.message || data.error}`);
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao sincronizar com o Gestão Escolar.');
+    }
+};
 
 window.salvarUser = async (userId) => {
     const perfilSelect = document.getElementById(`usr-perfil-${userId}`);

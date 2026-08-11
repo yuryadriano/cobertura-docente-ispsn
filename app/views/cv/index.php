@@ -1,6 +1,8 @@
 <?php
 /**
- * View: CV Estruturado — Modelo MESCTI
+ * View: CV Estruturado — Modelo MESCTI (4 Blocos Completos)
+ * GRH preenche por campos; gravação propaga automaticamente para todos os planos.
+ * sftcoordenacao — ISPSN 2026/27
  */
 $preDocId = (int)($_GET['docente_id'] ?? 0);
 ?>

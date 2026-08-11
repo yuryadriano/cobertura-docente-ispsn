@@ -1,8 +1,7 @@
 <?php
 /**
- * Modelo de Dados: Docente e CV Estruturado MESCTI
- * Módulo de Cobertura Docente & CV MESCTI — ISPSN
- * @author Evaristo Adriano
+ * Modelo de Dados: Docente
+ * sftcoordenacao — Módulo de Cobertura Docente ISPSN 2026/27
  */
 
 require_once __DIR__ . '/../../config/database.php';
@@ -14,6 +13,9 @@ class DocenteModel {
         $this->db = Database::getInstance();
     }
 
+    /**
+     * Retorna todos os docentes com métricas agregadas pré-calculadas via View SQL
+     */
     public function getAll(): array {
         $stmt = $this->db->query("
             SELECT d.*, 
@@ -31,6 +33,9 @@ class DocenteModel {
         return $stmt->fetchAll();
     }
 
+    /**
+     * Pesquisa e filtragem avançada de docentes (Busca inteligente)
+     */
     public function searchAndFilter(array $filters = []): array {
         $sql = "
             SELECT d.*, 
@@ -172,6 +177,10 @@ class DocenteModel {
     }
 
 
+    /**
+     * Carrega o CV completo de um docente: dados base (tabela docentes)
+     * + dados estruturados (tabela cvs_estruturados) num único array normalizado.
+     */
     public function getCVCompleto(int $docenteId): array {
         // Dados base do docente
         $stmtDoc = $this->db->prepare("SELECT * FROM docentes WHERE id = ?");
@@ -400,6 +409,10 @@ class DocenteModel {
         return $stmt->execute([$estado, $validadoPor, $docId]);
     }
 
+    /**
+     * Estatísticas de Qualificações Académicas para o Dashboard Institucional (BI)
+     * grau_academico é ENUM('Licenciado','Mestre','Doutor') na BD real
+     */
     public function getDashboardQualificacoes(): array {
         $stmt = $this->db->query("
             SELECT 
@@ -416,6 +429,11 @@ class DocenteModel {
         ];
     }
 
+    /**
+     * Estatísticas dos 3 Pilares de Regularização Docente (INAAREES, Capacitação, Carreira)
+     * Valores reais BD: tem_inaarees e tem_agregacao_pedag = 'Sim'|'Não'
+     * categoria_carreira = 'Sim'|'Não'|'Não registado'
+     */
     public function getDashboardPilares(): array {
         $stmt = $this->db->query("
             SELECT 
@@ -437,6 +455,10 @@ class DocenteModel {
         return $stmt->fetch() ?: [];
     }
 
+    /**
+     * Estatísticas de Partilha de Docentes entre Cursos (Risco de Sobrecarga)
+     * num_cursos vem da view vw_docentes_capacidade_carga; 0 = sem atribuições ainda
+     */
     public function getDashboardSobrecargaPartilha(): array {
         $stmt = $this->db->query("
             SELECT 
