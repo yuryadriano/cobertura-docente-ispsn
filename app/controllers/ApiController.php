@@ -84,6 +84,12 @@ class ApiController {
             case 'docente_documentos':
                 $this->getDocumentosDocente();
                 break;
+            case 'docente_ver_documento':
+                $this->verDocumentoDocente();
+                break;
+            case 'docente_eliminar_documento':
+                $this->eliminarDocumentoDocente();
+                break;
             case 'plano_historico':
                 $this->getHistoricoPlano();
                 break;
@@ -394,6 +400,84 @@ class ApiController {
         Response::json(['success' => true, 'data' => $docs]);
     }
 
+    private function verDocumentoDocente(): void {
+        $id = (int)($_GET['id'] ?? 0);
+        if (!$id) {
+            header("HTTP/1.1 404 Not Found");
+            echo "Documento não encontrado.";
+            exit;
+        }
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT * FROM documentos_docentes WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $doc = $stmt->fetch();
+
+        if (!$doc) {
+            header("HTTP/1.1 404 Not Found");
+            echo "Documento não encontrado na base de dados.";
+            exit;
+        }
+
+        $relPath = ltrim($doc['caminho_ficheiro'], '/');
+        $possiblePaths = [
+            __DIR__ . '/../../public/' . $relPath,
+            __DIR__ . '/../../' . $relPath,
+            'C:/xampp/htdocs/sftcoordenacao/public/' . $relPath
+        ];
+
+        $filePath = null;
+        foreach ($possiblePaths as $p) {
+            if (file_exists($p)) {
+                $filePath = $p;
+                break;
+            }
+        }
+
+        if (!$filePath) {
+            header("HTTP/1.1 404 Not Found");
+            echo "Ficheiro não encontrado no servidor de ficheiros.";
+            exit;
+        }
+
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'pdf'  => 'application/pdf',
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'doc'  => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+
+        $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
+        header("Content-Type: {$mime}");
+        header("Content-Disposition: inline; filename=\"" . basename($filePath) . "\"");
+        header("Content-Length: " . filesize($filePath));
+        readfile($filePath);
+        exit;
+    }
+
+    private function eliminarDocumentoDocente(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Response::error('Método HTTP inválido.', 405);
+        }
+        if (!Auth::check() || !Auth::canEditDoc()) {
+            Response::error('Sem permissão para eliminar documentos.', 403);
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $id = (int)($input['id'] ?? 0);
+        if (!$id) {
+            Response::error('ID do documento é obrigatório.');
+        }
+        $res = $this->docenteModel->deleteDocumento($id);
+        if ($res) {
+            Response::success('Documento eliminado com sucesso.');
+        } else {
+            Response::error('Falha ao eliminar documento.');
+        }
+    }
+
     private function getStats(): void {
         $anoLectivo = $_GET['ano_lectivo'] ?? '2026/27';
         $stats = $this->planoModel->getConsolidadosStats($anoLectivo);
@@ -448,6 +532,11 @@ class ApiController {
         }
 
         $db = Database::getInstance();
+        if (!empty($input['reset_senha'])) {
+            $stmt = $db->prepare("UPDATE utilizadores SET senha_hash = NULL WHERE id = ?");
+            $stmt->execute([$userId]);
+        }
+
         if ($nome && $email) {
             $stmt = $db->prepare("UPDATE utilizadores SET nome = ?, email = ?, perfil = ?, curso_id = ?, activo = ? WHERE id = ?");
             $res = $stmt->execute([$nome, $email, $perfil, $cursoId, $activo, $userId]);
@@ -457,8 +546,8 @@ class ApiController {
         }
 
         if ($res) {
-            $statusText = $activo ? 'ativado' : 'desativado';
-            Response::success("Utilizador atualizado com sucesso (Estado: {$statusText}).");
+            $msg = !empty($input['reset_senha']) ? "Palavra-passe resetada para Primeiro Acesso com sucesso." : "Utilizador atualizado com sucesso.";
+            Response::success($msg);
         } else {
             Response::error('Falha ao atualizar utilizador.');
         }

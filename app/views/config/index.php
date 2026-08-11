@@ -276,6 +276,7 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                             <td style="text-align:center;">
                                 <div style="display:flex; gap:4px; justify-content:center;">
                                     <button class="btn sm btn-ok" style="font-size:11px; padding:4px 8px;" onclick="window.salvarUser(<?= $u['id'] ?>)" title="Guardar Alterações do Utilizador">Guardar</button>
+                                    <button class="btn sm ghost" style="font-size:11px; padding:4px 8px; border-color:#d97706; color:#d97706;" onclick="window.resetSenhaUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['nome']) ?>')" title="Resetar Palavra-Passe (Primeiro Acesso)">🔑 Reset</button>
                                     <button class="btn sm ghost" style="font-size:11px; padding:4px 8px; border-color:var(--line);" onclick="window.alternarEstadoUser(<?= $u['id'] ?>, <?= $u['activo'] ? 0 : 1 ?>)" title="Alternar Estado Ativo/Inativo">⚡</button>
                                 </div>
                             </td>
@@ -505,6 +506,29 @@ window.salvarUser = async (userId) => {
         }
     } catch (err) {
         alert('Erro ao atualizar utilizador.');
+    }
+};
+
+window.resetSenhaUser = async (userId, nome) => {
+    if (!confirm(`Tem a certeza que deseja resetar a palavra-passe de "${nome}" para Primeiro Acesso?`)) return;
+    try {
+        const res = await fetch('index.php?api=utilizador_salvar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: userId,
+                reset_senha: true
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Palavra-passe de ${nome} foi resetada com sucesso! O utilizador já pode definir uma nova senha no Primeiro Acesso.`);
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.error || data.message || 'Falha ao resetar palavra-passe.'));
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao resetar palavra-passe.');
     }
 };
 

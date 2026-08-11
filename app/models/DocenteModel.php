@@ -385,22 +385,42 @@ class DocenteModel {
             $this->db->prepare("UPDATE docentes SET tem_agregacao_pedag = 'Sim' WHERE id = ?")->execute([$docenteId]);
         }
 
-        $stmtCheck = $this->db->prepare("SELECT id FROM documentos_docentes WHERE docente_id = ? AND tipo = ?");
-        $stmtCheck->execute([$docenteId, $enumTipo]);
-        $existingId = $stmtCheck->fetchColumn();
-
-        if ($existingId) {
-            $stmt = $this->db->prepare("UPDATE documentos_docentes SET caminho_ficheiro = ?, estado = 'Válido', validado_por = ?, created_at = NOW() WHERE id = ?");
-            $res = $stmt->execute([$caminhoFicheiro, $validadoPor, $existingId]);
-        } else {
-            $stmt = $this->db->prepare("INSERT INTO documentos_docentes (docente_id, tipo, caminho_ficheiro, estado, validado_por) VALUES (?, ?, ?, 'Válido', ?)");
-            $res = $stmt->execute([$docenteId, $enumTipo, $caminhoFicheiro, $validadoPor]);
-        }
+        $stmt = $this->db->prepare("INSERT INTO documentos_docentes (docente_id, tipo, caminho_ficheiro, estado, validado_por) VALUES (?, ?, ?, 'Válido', ?)");
+        $res = $stmt->execute([$docenteId, $enumTipo, $caminhoFicheiro, $validadoPor]);
 
         if ($res) {
             $this->recalcularConformidadeDocenteEmTodosPlanos($docenteId);
         }
 
+        return $res;
+    }
+
+    public function deleteDocumento(int $docId): bool {
+        $stmtSelect = $this->db->prepare("SELECT * FROM documentos_docentes WHERE id = ?");
+        $stmtSelect->execute([$docId]);
+        $doc = $stmtSelect->fetch();
+        if (!$doc) return false;
+
+        $docenteId = (int)$doc['docente_id'];
+
+        // Tentar remover o ficheiro do disco se existir
+        $relPath = ltrim($doc['caminho_ficheiro'], '/');
+        $possiblePaths = [
+            __DIR__ . '/../../public/' . $relPath,
+            __DIR__ . '/../../' . $relPath
+        ];
+        foreach ($possiblePaths as $p) {
+            if (file_exists($p)) {
+                @unlink($p);
+                break;
+            }
+        }
+
+        $stmt = $this->db->prepare("DELETE FROM documentos_docentes WHERE id = ?");
+        $res = $stmt->execute([$docId]);
+        if ($res) {
+            $this->recalcularConformidadeDocenteEmTodosPlanos($docenteId);
+        }
         return $res;
     }
 

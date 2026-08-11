@@ -131,7 +131,8 @@ window.selectDocente = async (docenteInput, rowElement) => {
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
             data.data.forEach(item => {
-                docsMap[item.tipo] = item;
+                if (!docsMap[item.tipo]) docsMap[item.tipo] = [];
+                docsMap[item.tipo].push(item);
             });
         }
     } catch (e) {
@@ -150,28 +151,51 @@ window.selectDocente = async (docenteInput, rowElement) => {
     let loadedCount = 0;
     DOCTYPES.forEach(([k]) => {
         const dbKey = typeToKeyMap[k] || k;
-        if (docsMap[dbKey]) loadedCount++;
+        if (docsMap[dbKey] && docsMap[dbKey].length > 0) loadedCount++;
     });
 
     const badgeClass = loadedCount >= 5 ? 'ok' : (loadedCount >= 3 ? 'warn' : 'bad');
 
     const cardsHtml = DOCTYPES.map(([k, title, desc]) => {
         const dbKey = typeToKeyMap[k] || k;
-        const item = docsMap[dbKey];
-        const done = !!item;
-        const fileName = item ? (item.caminho_ficheiro.split('/').pop()) : 'Nenhum ficheiro';
-        const fileUrl = item ? item.caminho_ficheiro : '#';
+        const items = docsMap[dbKey] || [];
+        const done = items.length > 0;
 
-        const openBtn = done ? `<a href="${fileUrl}" target="_blank" onclick="event.stopPropagation();" style="display:inline-block; margin-top:6px; font-size:11px; color:var(--blue); font-weight:700;">👁️ Ver / Descarregar Documento</a>` : '';
+        let fileListHtml = '';
+        if (done) {
+            fileListHtml = `
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                    ${items.map(item => {
+                        const fileName = item.caminho_ficheiro.split('/').pop();
+                        const viewUrl = `index.php?api=docente_ver_documento&id=${item.id}`;
+                        const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pt-PT') : '';
+                        return `
+                            <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%;">
+                                    <span style="font-weight:700; color:var(--navy);" title="${fileName}">📄 ${fileName}</span>
+                                    <span style="font-size:10.5px; color:var(--mut); display:block;">${dateStr ? 'Carregado a ' + dateStr : ''}</span>
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+                                    <a href="${viewUrl}" target="_blank" onclick="event.stopPropagation();" class="btn sm ghost" style="padding:2px 8px; font-size:11px; color:var(--blue); border-color:var(--blue); text-decoration:none;" title="Ver / Descarregar Documento">👁️ Ver</a>
+                                    ${window.CAN_EDIT_DOC ? `<button onclick="event.stopPropagation(); window.eliminarDoc(${item.id}, ${docenteId})" class="btn sm ghost" style="padding:2px 6px; font-size:11px; color:var(--bad); border-color:var(--bad);" title="Eliminar Documento">🗑️</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
 
         return `
             <div class="doccard">
-                <div class="t">${title}</div>
+                <div class="t">${title} ${done ? `<span class="pill ok" style="font-size:10.5px; padding:2px 6px; font-weight:700;">${items.length} ficheiro(s)</span>` : ''}</div>
                 <div class="s">${desc}</div>
-                <div class="drop ${done ? 'done' : ''}" onclick="window.triggerFilePicker(${docenteId}, '${name.replace(/'/g, "\\'")}', '${k}')" style="cursor:pointer;" title="Clique para selecionar e enviar um ficheiro do seu computador">
-                    ${done ? '✔ ' + fileName + ' — no servidor' : '📁 Clicar para selecionar documento do computador'}
-                </div>
-                ${openBtn}
+                ${fileListHtml}
+                ${window.CAN_EDIT_DOC ? `
+                    <div class="drop ${done ? 'done' : ''}" onclick="window.triggerFilePicker(${docenteId}, '${name.replace(/'/g, "\\'")}', '${k}')" style="cursor:pointer; margin-top:8px;" title="Clique para selecionar e enviar um ficheiro do computador">
+                        ${done ? '➕ Adicionar outro ficheiro' : '📁 Clicar para selecionar documento do computador'}
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -180,7 +204,7 @@ window.selectDocente = async (docenteInput, rowElement) => {
         <div class="card" style="background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden;">
             <div class="hd" style="font-weight:700; padding:12px 18px; border-bottom:1px solid var(--line); background:#faf9f5; color:var(--blue); font-size:14px; display:flex; justify-content:space-between; align-items:center;">
                 <span>${name} · ficha documental</span>
-                <span class="pill ${badgeClass}">${loadedCount}/6 documentos armazenados</span>
+                <span class="pill ${badgeClass}">${loadedCount}/6 categorias com documentos</span>
             </div>
             <div class="bd" style="padding:16px;">
                 <table style="margin-bottom:14px; width:100%; border-collapse:collapse;">
@@ -189,7 +213,6 @@ window.selectDocente = async (docenteInput, rowElement) => {
                         <tr><td style="color:var(--mut); padding:4px 0;">Especialidade</td><td>${d.especialidade || 'Não identificada'}</td></tr>
                         <tr><td style="color:var(--mut); padding:4px 0;">INAAREES</td><td>${d.tem_inaarees || 'Não'}</td></tr>
                         <tr><td style="color:var(--mut); padding:4px 0;">Capacitação pedagógica</td><td>${d.tem_agregacao_pedag || 'Não'}</td></tr>
-                        <tr><td style="color:var(--mut); padding:4px 0;">Cursos em 2025/26</td><td>1 ${d.nc >= 3 ? '<span class="pill bad">sobrecarga</span>' : ''}</td></tr>
                     </tbody>
                 </table>
                 <div class="docgrid">${cardsHtml}</div>
@@ -201,6 +224,28 @@ window.selectDocente = async (docenteInput, rowElement) => {
     `;
 
     document.getElementById('detail-container').innerHTML = html;
+};
+
+window.eliminarDoc = async (docId, docenteId) => {
+    if (!confirm('Tem a certeza que deseja eliminar este documento?')) return;
+    try {
+        const res = await fetch('index.php?api=docente_eliminar_documento', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: docId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Documento eliminado com sucesso.');
+            if (window.SELECTED_DOCENTE && window.SELECTED_DOCENTE.id == docenteId) {
+                window.selectDocente(window.SELECTED_DOCENTE);
+            }
+        } else {
+            alert('⚠️ Erro ao eliminar documento: ' + (data.error || data.message || 'Erro desconhecido.'));
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao eliminar documento.');
+    }
 };
 
 window.triggerFilePicker = (docenteId, docName, key) => {
