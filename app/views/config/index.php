@@ -113,12 +113,14 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                     <div>
                         <label style="font-weight:700; font-size:12px; color:#166534;">Perfil de Acesso (RBAC):</label>
                         <select id="ad-perfil" required class="form-control" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #86EFAC; font-weight:700;" onchange="window.toggleCursoDocenteField(this.value)">
+                            <option value="">-- Perfil Não Definido --</option>
                             <option value="coordenador">Coordenador de Curso</option>
                             <option value="chefe_departamento">Chefe de Departamento</option>
-                            <option value="secretario_geral">Secretário-Geral</option>
-                            <option value="presidente">Presidência</option>
                             <option value="gestor_academico">Gestão Académica</option>
                             <option value="grh">GRH (Recursos Humanos)</option>
+                            <option value="presidente">Presidente</option>
+                            <option value="secretario_geral">Secretário-Geral</option>
+                            <option value="docente">Corpo Docente</option>
                             <option value="admin">Administração</option>
                         </select>
                     </div>
@@ -194,12 +196,14 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                     <div>
                         <label style="font-weight:600; font-size:12px;">Perfil de Acesso:</label>
                         <select id="nu-perfil" required class="form-control" style="width:100%; padding:6px 10px; border-radius:6px; border:1px solid var(--line);">
+                            <option value="">-- Perfil Não Definido --</option>
                             <option value="coordenador">Coordenador de Curso</option>
                             <option value="chefe_departamento">Chefe de Departamento</option>
                             <option value="gestor_academico">Gestão Académica</option>
-                            <option value="grh">GRH</option>
+                            <option value="grh">GRH (Recursos Humanos)</option>
                             <option value="presidente">Presidente</option>
                             <option value="secretario_geral">Secretário-Geral</option>
+                            <option value="docente">Corpo Docente</option>
                             <option value="admin">Administração</option>
                         </select>
                     </div>

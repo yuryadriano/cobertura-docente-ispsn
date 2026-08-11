@@ -235,6 +235,7 @@ class PlanoModel {
                 c.id AS curso_id,
                 c.nome AS curso_nome,
                 pc.estado,
+                pc.data_submissao,
                 COUNT(DISTINCT lc.turma_id) AS num_turmas,
                 COUNT(lc.id) AS total_uc,
                 SUM(CASE WHEN lc.docente_id IS NOT NULL THEN 1 ELSE 0 END) AS uc_atribuidas,
@@ -246,7 +247,7 @@ class PlanoModel {
             LEFT JOIN planos_cobertura pc ON c.id = pc.curso_id AND pc.ano_lectivo = ?
             LEFT JOIN linhas_cobertura lc ON pc.id = lc.plano_id
             WHERE c.activo = 1
-            GROUP BY c.id, c.nome, pc.estado
+            GROUP BY c.id, c.nome, pc.estado, pc.data_submissao
             ORDER BY c.nome ASC
         ");
         $stmt->execute([$anoLectivo]);
