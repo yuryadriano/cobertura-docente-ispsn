@@ -1,6 +1,8 @@
 <?php
 /**
- * Helper de Autenticação e Permissões (RBAC) com suporte completo a perfis ISPSN
+ * Helper de Autenticação e Permissões (RBAC)
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -55,9 +57,6 @@ class Auth {
         }
     }
 
-    /**
-     * Tenta autenticar um utilizador com email corporativo e palavra-passe
-     */
     public static function attempt(string $email, string $password): array {
         $email = trim(strtolower($email));
         if (empty($email)) {
@@ -92,9 +91,6 @@ class Auth {
         return ['success' => false, 'message' => 'Palavra-passe incorreta. Tente novamente.'];
     }
 
-    /**
-     * Procura um utilizador pré-cadastrado pelo email corporativo
-     */
     public static function findUserByEmail(string $email): ?array {
         $email = trim(strtolower($email));
         if (empty($email)) return null;
@@ -136,9 +132,6 @@ class Auth {
         return $user ?: null;
     }
 
-    /**
-     * Ativa a conta no Primeiro Acesso definindo a nova palavra-passe
-     */
     public static function activateAccount(string $email, string $newPassword): array {
         $email = trim(strtolower($email));
         if (empty($email) || empty($newPassword)) {
@@ -170,9 +163,6 @@ class Auth {
         return ['success' => true, 'message' => 'Conta ativada com sucesso! Bem-vindo ao Portal ISPSN.', 'user' => $user];
     }
 
-    /**
-     * Solicita redefinição de palavra-passe por e-mail corporativo
-     */
     public static function requestPasswordReset(string $email): array {
         $email = trim(strtolower($email));
         if (empty($email)) {
@@ -223,9 +213,6 @@ class Auth {
         ];
     }
 
-    /**
-     * Redefine a palavra-passe com o código PIN de confirmação
-     */
     public static function resetPassword(string $email, string $pin, string $newPassword): array {
         $email = trim(strtolower($email));
         $pin   = trim($pin);

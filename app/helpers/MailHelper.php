@@ -1,14 +1,12 @@
 <?php
 /**
- * Helper de Envio de E-mail por SMTP Nativo (Socket RFC 5321)
- * sftcoordenacao — Módulo de Cobertura Docente ISPSN 2026/27
+ * Helper de Envio de E-mail por SMTP Nativo
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 class MailHelper {
 
-    /**
-     * Envia e-mail corporativo autenticado via servidor SMTP institucional
-     */
     public static function send(string $toEmail, string $subject, string $bodyHtml, string $altText = ''): array {
         $host     = defined('SMTP_HOST') ? SMTP_HOST : 'localhost';
         $port     = defined('SMTP_PORT') ? (int)SMTP_PORT : 587;
@@ -17,7 +15,6 @@ class MailHelper {
         $secure   = defined('SMTP_SECURE') ? strtolower(SMTP_SECURE) : 'tls';
         $fromName = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'Direção de TI — ISPSN';
 
-        // Se o servidor SMTP estiver sem senha configurada (modo padrão local / ambiente de desenvolvimento)
         if (empty($host) || $host === 'localhost' || empty($password)) {
             // Tentar transporte mail() nativo do sistema
             $headers  = "From: $fromName <$username>\r\n";

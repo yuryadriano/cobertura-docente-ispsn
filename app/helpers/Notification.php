@@ -1,7 +1,8 @@
 <?php
 /**
  * Helper de Notificações Automáticas e Alertas Institucionais
- * sftcoordenacao — ISPSN 2026/27
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -24,9 +25,6 @@ class Notification {
         $_SESSION['system_notifications'] = array_slice($_SESSION['system_notifications'], 0, 10);
     }
     
-    /**
-     * Processa e regista uma notificação de mudança de estado do plano de cobertura
-     */
     public static function notifyStateChange(array $plano, string $novoEstado, ?string $observacoes, ?array $actorUser): array {
         $cursoId = (int)($plano['curso_id'] ?? 1);
         $anoLectivo = $plano['ano_lectivo'] ?? '2026/27';
@@ -44,10 +42,8 @@ class Notification {
             'timestamp'   => date('Y-m-d H:i:s')
         ];
 
-        // Guardar na pilha de notificações em sessão para exibição no cabeçalho/painel
         $_SESSION['system_notifications'] = $_SESSION['system_notifications'] ?? [];
         array_unshift($_SESSION['system_notifications'], $notifData);
-        // Manter apenas as últimas 10 notificações
         $_SESSION['system_notifications'] = array_slice($_SESSION['system_notifications'], 0, 10);
 
         // Definir mensagem flash apropriada para o perfil ativo
@@ -65,9 +61,6 @@ class Notification {
         return $notifData;
     }
 
-    /**
-     * Regista o log do e-mail corporativo enviado aos envolvidos (@ispsn.org)
-     */
     private static function logEmailDispatch(array $data): void {
         $logFile = __DIR__ . '/../../public/uploads/email_notifications.log';
         $logDir = dirname($logFile);
@@ -88,9 +81,6 @@ class Notification {
         @file_put_contents($logFile, $entry, FILE_APPEND);
     }
 
-    /**
-     * Retorna a lista de notificações ativas da sessão
-     */
     public static function getNotifications(): array {
         return $_SESSION['system_notifications'] ?? [];
     }

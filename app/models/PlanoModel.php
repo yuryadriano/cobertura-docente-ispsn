@@ -1,7 +1,8 @@
 <?php
 /**
- * Modelo de Dados: Plano de Cobertura e Linhas
- * sftcoordenacao — Módulo de Cobertura Docente ISPSN 2026/27
+ * Modelo de Dados: Plano de Cobertura Curricular e Linhas de Atribuição
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 require_once __DIR__ . '/../../config/database.php';
@@ -21,9 +22,6 @@ class PlanoModel {
         return $plano ?: null;
     }
 
-    /**
-     * Consulta otimizada de alta performance via View SQL vw_linhas_cobertura_detalhada
-     */
     public function getLinhasPlano(int $planoId, string $anoLectivo = '2026/27'): array {
         $stmt = $this->db->prepare("
             SELECT * FROM vw_linhas_cobertura_detalhada
@@ -177,34 +175,7 @@ class PlanoModel {
         ]);
     }
 
-    /**
-     * Prepara e simula a sincronização bidirecional do plano aprovado com o sistema de Gestão Escolar
-     */
-    public function sincronizarComGestaoEscolar(int $planoId): array {
-        $linhas = $this->getLinhasPlano($planoId);
-        $sincronizados = 0;
-        $erros = [];
 
-        foreach ($linhas as $l) {
-            if ($l['docente_id'] && $l['turma_id']) {
-                // Atualiza a turma correspondente no banco com o docente aprovado
-                $stmt = $this->db->prepare("UPDATE turmas SET docente_id = ? WHERE id = ?");
-                $res = $stmt->execute([$l['docente_id'], $l['turma_id']]);
-                if ($res) {
-                    $sincronizados++;
-                } else {
-                    $erros[] = "Falha ao sincronizar turma {$l['turma_id']}";
-                }
-            }
-        }
-
-        return [
-            'success' => true,
-            'sincronizados' => $sincronizados,
-            'erros' => $erros,
-            'timestamp' => date('Y-m-d H:i:s')
-        ];
-    }
 
     public function updateEstadoPlano(int $planoId, string $estado, ?string $obs = null, ?int $userId = null): bool {
         $sql = "UPDATE planos_cobertura SET estado = :estado, observacoes = :obs";
@@ -617,21 +588,6 @@ class PlanoModel {
         }
     }
 
-    /**
-     * Propaga atualizações de perfil/CV do docente para todas as linhas de cobertura ativas onde está atribuído
-     */
-    public function propagarPerfilDocenteNasLinhas(int $docenteId): int {
-        // Buscar todas as linhas ativas do docente
-        $stmt = $this->db->prepare("SELECT id FROM linhas_cobertura WHERE docente_id = ?");
-        $stmt->execute([$docenteId]);
-        $linhas = $stmt->fetchAll();
 
-        $count = 0;
-        foreach ($linhas as $l) {
-            $this->recalcularConformidadeLinha((int)$l['id']);
-            $count++;
-        }
-        return $count;
-    }
 }
 

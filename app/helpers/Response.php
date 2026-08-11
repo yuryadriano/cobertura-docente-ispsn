@@ -1,6 +1,8 @@
 <?php
 /**
- * Helper de Respostas JSON e HTTP
+ * Helper de Respostas HTTP / JSON
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 class Response {

@@ -1,7 +1,8 @@
 <?php
 /**
  * Configurações Globais da Aplicação
- * sftcoordenacao — Módulo de Cobertura Docente ISPSN 2026/27
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 if (!defined('BASE_URL')) {
@@ -9,6 +10,10 @@ if (!defined('BASE_URL')) {
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $baseUrl = $protocol . $host . '/sftcoordenacao/public';
     define('BASE_URL', $baseUrl);
+}
+
+if (!defined('APP_ENV')) {
+    define('APP_ENV', getenv('APP_ENV') ?: 'development');
 }
 
 if (!defined('APP_NAME')) {
@@ -64,12 +69,9 @@ define('PERFIS_ACESSO', [
     'admin'            => 'Administrador do Sistema'
 ]);
 
-// Configurações do Servidor SMTP Institucional ISPSN (E-mail Autenticado)
-if (!defined('SMTP_HOST'))      define('SMTP_HOST', 'mail.ispsn.org');       // ex: mail.ispsn.org, smtp.office365.com, smtp.gmail.com
-if (!defined('SMTP_PORT'))      define('SMTP_PORT', 587);                    // 587 (TLS/STARTTLS) ou 465 (SSL)
-if (!defined('SMTP_USER'))      define('SMTP_USER', 'suporte.ti@ispsn.org');  // E-mail da conta remetente institucional
-if (!defined('SMTP_PASS'))      define('SMTP_PASS', '');                     // Palavra-passe da conta de e-mail institucional (Preencher para ativar envio real)
-if (!defined('SMTP_SECURE'))    define('SMTP_SECURE', 'tls');                // 'tls' ou 'ssl'
+if (!defined('SMTP_HOST'))      define('SMTP_HOST', 'mail.ispsn.org');
+if (!defined('SMTP_PORT'))      define('SMTP_PORT', 587);
+if (!defined('SMTP_USER'))      define('SMTP_USER', 'suporte.ti@ispsn.org');
+if (!defined('SMTP_PASS'))      define('SMTP_PASS', '');
+if (!defined('SMTP_SECURE'))    define('SMTP_SECURE', 'tls');
 if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', 'Direção de TI — ISPSN');
-
-

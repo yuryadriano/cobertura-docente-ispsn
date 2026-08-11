@@ -1,7 +1,8 @@
 <?php
 /**
- * Modelo de Dados: Curso e Disciplinas
- * sftcoordenacao — Módulo de Cobertura Docente ISPSN 2026/27
+ * Modelo de Dados: Cursos e Disciplinas Curriculares
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 require_once __DIR__ . '/../../config/database.php';
@@ -35,9 +36,6 @@ class CursoModel {
         return $stmt->fetchAll();
     }
 
-    /**
-     * Busca turmas de um determinado curso com metadados da disciplina e docente atribuído
-     */
     public function getTurmasDetalhadas(int $cursoId, ?int $anoCurricular = null): array {
         $sql = "
             SELECT 
@@ -68,9 +66,6 @@ class CursoModel {
         return $stmt->fetchAll();
     }
 
-    /**
-     * Atualiza os indicadores operacionais de uma turma
-     */
     public function updateTurmaIndicadores(string $turmaId, array $data): bool {
         $fields = [];
         $params = [':id' => $turmaId];
@@ -114,9 +109,6 @@ class CursoModel {
         return $stmt->execute($params);
     }
 
-    /**
-     * Insere ou edita uma disciplina da matriz curricular
-     */
     public function saveDisciplina(array $data): bool {
         $id = !empty($data['disciplina_id']) ? (int)$data['disciplina_id'] : null;
         $cursoId = (int)($data['curso_id'] ?? 0);

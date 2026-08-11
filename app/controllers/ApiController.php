@@ -1,7 +1,8 @@
 <?php
 /**
- * Controller API REST JSON
- * sftcoordenacao — Módulo de Cobertura Docente ISPSN 2026/27
+ * Controller API REST / Endpoints Internos
+ * Módulo de Cobertura Docente & CV MESCTI — ISPSN
+ * @author Evaristo Adriano
  */
 
 require_once __DIR__ . '/../helpers/Auth.php';
@@ -96,9 +97,7 @@ class ApiController {
             case 'executar_rollover':
                 $this->executarRollOver();
                 break;
-            case 'sincronizar_gestao_escolar':
-                $this->sincronizarGestaoEscolar();
-                break;
+
             case 'cv_carregar':
                 $this->carregarCV();
                 break;
@@ -201,7 +200,6 @@ class ApiController {
             Response::error('ID da linha é obrigatório.');
         }
 
-        // Validação RBAC por curso
         $db = Database::getInstance();
         $stmt = $db->prepare("SELECT pc.curso_id FROM linhas_cobertura lc JOIN planos_cobertura pc ON lc.plano_id = pc.id WHERE lc.id = ? LIMIT 1");
         $stmt->execute([$linhaId]);
@@ -212,7 +210,6 @@ class ApiController {
 
         $res = $this->planoModel->updateLinha($linhaId, $input);
         if ($res) {
-            // Retornar a linha atualizada para o JS actualizar apenas em memória
             $linhaAtualizada = $this->planoModel->getLinhaById($linhaId);
             Response::json([
                 'success' => true,
@@ -263,7 +260,6 @@ class ApiController {
         $user = Auth::user();
         $perfil = $user['perfil'] ?? 'coordenador';
 
-        // Validação de permissão RBAC por etapa
         if ($novoEstado === 'Aprovado pelo Departamento' && !in_array($perfil, ['chefe_departamento', 'admin'])) {
             Response::error('Apenas o Chefe de Departamento tem autorização para aprovar este plano nesta etapa.', 403);
         }
@@ -292,7 +288,6 @@ class ApiController {
             $planoObj = $this->planoModel->getLinhasPlano($planoId);
             $planoDb = ['id' => $planoId, 'curso_id' => $planoObj[0]['curso_id'] ?? 1, 'ano_lectivo' => '2026/27'];
             Notification::notifyStateChange($planoDb, $novoEstado, $obs, $user);
-
             Response::success("Estado do plano alterado para '$novoEstado' com sucesso.");
         } else {
             Response::error('Falha ao alterar estado do plano.');
@@ -641,21 +636,7 @@ class ApiController {
         }
     }
 
-    private function sincronizarGestaoEscolar(): void {
-        if (!Auth::check()) {
-            Response::error('Sessão não iniciada.', 401);
-        }
 
-        require_once __DIR__ . '/../services/GestaoEscolarSyncService.php';
-        $syncService = new GestaoEscolarSyncService();
-        $res = $syncService->syncAll();
-
-        if (!empty($res['success'])) {
-            Response::json($res);
-        } else {
-            Response::error($res['message'] ?? 'Falha ao sincronizar com o Gestão Escolar.');
-        }
-    }
 
     private function exportarExcel(): void {
         $cursoId = (int)($_GET['curso_id'] ?? 1);
@@ -735,10 +716,6 @@ class ApiController {
         Response::json(['success' => true, 'data' => $historico]);
     }
 
-    /**
-     * GET ?api=cv_carregar&docente_id=X
-     * Retorna o CV completo (docentes + cvs_estruturados) normalizado num único objeto JSON.
-     */
     private function carregarCV(): void {
         $docenteId = (int)($_GET['docente_id'] ?? 0);
         if (!$docenteId) {
@@ -753,10 +730,6 @@ class ApiController {
         Response::json(['success' => true, 'data' => $cv]);
     }
 
-    /**
-     * POST ?api=cv_salvar
-     * Grava o CV completo em transação (docentes + cvs_estruturados) e propaga conformidade.
-     */
     private function salvarCV(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             Response::error('Método HTTP inválido.', 405);
@@ -766,7 +739,6 @@ class ApiController {
             Response::error('Sessão não iniciada. Por favor efetue login.', 401);
             return;
         }
-        // RBAC: apenas GRH e Admin podem editar CV
         if (!Auth::hasRole(['grh', 'admin'])) {
             Response::error('Apenas o perfil GRH ou Admin pode guardar o CV estruturado.', 403);
             return;
@@ -792,9 +764,6 @@ class ApiController {
         }
     }
 
-    /**
-     * GET ?api=turmas&curso_id=X&ano_curricular=Y
-     */
     private function getTurmas(): void {
         $cursoId = (int)($_GET['curso_id'] ?? 0);
         $anoCurricular = !empty($_GET['ano_curricular']) ? (int)$_GET['ano_curricular'] : null;
@@ -808,9 +777,6 @@ class ApiController {
         Response::json(['success' => true, 'data' => $turmas]);
     }
 
-    /**
-     * POST ?api=turma_salvar
-     */
     private function salvarTurma(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             Response::error('Método HTTP inválido.', 405);
@@ -830,7 +796,6 @@ class ApiController {
             return;
         }
 
-        // Validação RBAC por curso
         $db = Database::getInstance();
         $stmt = $db->prepare("SELECT d.curso_id FROM turmas t JOIN disciplinas d ON t.disciplina_id = d.id WHERE t.id = ? LIMIT 1");
         $stmt->execute([$turmaId]);
@@ -849,9 +814,6 @@ class ApiController {
         }
     }
 
-    /**
-     * GET ?api=disciplinas&curso_id=X
-     */
     private function getDisciplinas(): void {
         $cursoId = (int)($_GET['curso_id'] ?? 0);
         if (!$cursoId) {
@@ -863,9 +825,6 @@ class ApiController {
         Response::json(['success' => true, 'data' => $disciplinas]);
     }
 
-    /**
-     * POST ?api=disciplina_salvar
-     */
     private function salvarDisciplina(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             Response::error('Método HTTP inválido.', 405);

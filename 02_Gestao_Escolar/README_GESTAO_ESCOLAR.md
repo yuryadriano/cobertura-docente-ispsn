@@ -14,9 +14,7 @@ Esta pasta contém tudo o que é necessário para desenvolver a solução como *
 │   └── index.html                     protótipo navegável do BackOffice (coordenadores/gestores)
 ├── frontoffice-dashboard/
 │   └── index.html                     protótipo do Dashboard institucional (Direção/stakeholders)
-├── dados/
-│   └── portal_data.json               dados reais usados no protótipo (referência)
-└── docs/
+├── docs/
     └── Especificacao_Modulo_Cobertura_Docente.docx   especificação funcional e técnica completa
 ```
 
