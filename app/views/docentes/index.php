@@ -9,13 +9,79 @@ $currentUserRole = $_SESSION['user']['perfil'] ?? 'coordenador';
 
 <h2 class="page" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:4px;">
     <span>📁 Repositório de Docentes &amp; Documentos</span>
-    <?php if ($canEditDoc): ?>
-        <span class="pill ok" style="font-size:12px; padding:5px 14px; font-weight:700;">✏️ Edição Permitida (GRH / Admin)</span>
-    <?php else: ?>
-        <span class="pill mut" style="font-size:12px; padding:5px 14px; font-weight:700;">🔒 Só Leitura (Consulta)</span>
-    <?php endif; ?>
+    <div style="display:flex; gap:8px; align-items:center;">
+        <?php if ($canEditDoc): ?>
+            <button class="btn sm btn-ok" style="background:#1e8449; color:#fff; font-weight:700; font-size:12.5px; padding:6px 14px;" onclick="window.toggleModalNovoDocente()">➕ Novo Docente</button>
+            <span class="pill ok" style="font-size:12px; padding:5px 14px; font-weight:700;">✏️ Edição Permitida (GRH / Admin)</span>
+        <?php else: ?>
+            <span class="pill mut" style="font-size:12px; padding:5px 14px; font-weight:700;">🔒 Só Leitura (Consulta)</span>
+        <?php endif; ?>
+    </div>
 </h2>
 <p class="sub" style="margin-bottom:14px;">Repositório documental de cada docente. Suporta CV, certificados, diplomas, BI, INAAREES e agregação pedagógica.</p>
+
+<!-- Modal de Cadastro de Novo Docente no Catálogo Académico -->
+<div id="modal-novo-docente" class="hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.55); z-index:999; display:flex; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; max-width:580px; width:90%; padding:24px; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px;">
+            <h3 style="margin:0; color:var(--blue); font-size:16px;">➕ Cadastrar Novo Docente no Catálogo Académico</h3>
+            <button onclick="window.toggleModalNovoDocente()" style="background:none; border:none; font-size:18px; font-weight:700; cursor:pointer;">✕</button>
+        </div>
+        <form onsubmit="window.criarDocente(event)">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                <div style="grid-column: span 2;">
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Nome Completo *</label>
+                    <input type="text" id="nd-nome" required class="form-control" placeholder="ex: Prof. Dr. António Silva" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line);">
+                </div>
+                <div>
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">E-mail Corporativo (Opcional)</label>
+                    <input type="email" id="nd-email" class="form-control" placeholder="antonio.silva@ispsn.org" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line);">
+                </div>
+                <div>
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Grau Académico *</label>
+                    <select id="nd-grau" required class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line); font-weight:600;">
+                        <option value="Licenciado">Licenciado</option>
+                        <option value="Mestre">Mestre</option>
+                        <option value="Doutor">Doutor</option>
+                    </select>
+                </div>
+                <div style="grid-column: span 2;">
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Especialidade / Área de Conhecimento</label>
+                    <input type="text" id="nd-especialidade" class="form-control" placeholder="ex: Direito Constitucional, Economia Monetária" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line);">
+                </div>
+                <div>
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Homologação INAAREES *</label>
+                    <select id="nd-inaarees" required class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line);">
+                        <option value="Não">Não</option>
+                        <option value="Sim">Sim</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Capacitação Pedagógica *</label>
+                    <select id="nd-pedag" required class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line);">
+                        <option value="Não">Não</option>
+                        <option value="Sim">Sim</option>
+                    </select>
+                </div>
+                <div style="grid-column: span 2;">
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Categoria da Carreira Docente *</label>
+                    <select id="nd-categoria" required class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line); font-weight:600;">
+                        <option value="Assistente">Assistente</option>
+                        <option value="Auxiliar">Professor Auxiliar</option>
+                        <option value="Associado">Professor Associado</option>
+                        <option value="Catedrático">Professor Catedrático</option>
+                        <option value="Colaborador">Colaborador</option>
+                        <option value="Convidado">Convidado</option>
+                    </select>
+                </div>
+            </div>
+            <div style="text-align:right; border-top:1px solid var(--line); padding-top:14px; margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" onclick="window.toggleModalNovoDocente()" class="btn ghost">Cancelar</button>
+                <button type="submit" class="btn btn-ok" style="background:#1e8449; color:#fff; font-weight:700;">💾 Gravar Novo Docente</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?php if (!$canEditDoc): ?>
     <div class="note" style="border-left:4px solid var(--gold); background:#FFF9E6; border:1px solid var(--gold); border-radius:8px; padding:12px 16px; font-size:13px; color:#1A1A1A; margin-bottom:18px; box-shadow:0 2px 6px rgba(0,0,0,0.02);">
@@ -298,6 +364,53 @@ window.filterDocentes = (term) => {
         const name = r.getAttribute('data-name');
         r.style.display = name.includes(q) ? '' : 'none';
     });
+};
+
+window.toggleModalNovoDocente = () => {
+    const modal = document.getElementById('modal-novo-docente');
+    if (modal) modal.classList.toggle('hidden');
+};
+
+window.criarDocente = async (event, confirmDup = false) => {
+    if (event) event.preventDefault();
+
+    const nome = document.getElementById('nd-nome').value.trim();
+    const email = document.getElementById('nd-email').value.trim();
+    const grau = document.getElementById('nd-grau').value;
+    const especialidade = document.getElementById('nd-especialidade').value.trim();
+    const tem_inaarees = document.getElementById('nd-inaarees').value;
+    const tem_agregacao_pedag = document.getElementById('nd-pedag').value;
+    const categoria_carreira = document.getElementById('nd-categoria').value;
+
+    try {
+        const res = await fetch('index.php?api=docente_criar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                nome, email, grau_academico: grau, especialidade,
+                tem_inaarees, tem_agregacao_pedag, categoria_carreira,
+                confirm_dup: confirmDup
+            })
+        });
+        const data = await res.json();
+
+        if (data.dup_warning) {
+            if (confirm(data.message)) {
+                return window.criarDocente(null, true);
+            }
+            return;
+        }
+
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            window.toggleModalNovoDocente();
+            location.reload();
+        } else {
+            alert(`⚠️ Erro: ${data.error || data.message || 'Falha ao cadastrar docente.'}`);
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao registar docente.');
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {

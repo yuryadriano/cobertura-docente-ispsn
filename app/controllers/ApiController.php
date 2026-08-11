@@ -305,6 +305,25 @@ class ApiController {
         }
     }
 
+    private function criarDocente(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Response::error('Método HTTP inválido.', 405);
+        }
+
+        if (!Auth::check()) {
+            Response::error('Sessão não iniciada. Por favor efetue login.', 401);
+        }
+
+        if (!Auth::canEditDoc()) {
+            Response::error('Apenas o perfil GRH ou Administração pode cadastrar novos docentes.', 403);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $res = $this->docenteModel->createDocente($input);
+
+        Response::json($res);
+    }
+
     private function salvarDocente(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             Response::error('Método HTTP inválido.', 405);

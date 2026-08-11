@@ -101,6 +101,56 @@ class DocenteModel {
         return $val !== false ? (int)$val : 0;
     }
 
+    public function createDocente(array $data): array {
+        $nome = trim($data['nome'] ?? '');
+        $email = !empty($data['email']) ? trim(strtolower($data['email'])) : null;
+        $grau = in_array($data['grau_academico'] ?? '', ['Licenciado', 'Mestre', 'Doutor']) ? $data['grau_academico'] : 'Licenciado';
+        $especialidade = !empty($data['especialidade']) ? trim($data['especialidade']) : 'Não identificada';
+        $inaarees = ($data['tem_inaarees'] ?? 'Não') === 'Sim' ? 'Sim' : 'Não';
+        $pedag = ($data['tem_agregacao_pedag'] ?? 'Não') === 'Sim' ? 'Sim' : 'Não';
+        $categoria = !empty($data['categoria_carreira']) ? trim($data['categoria_carreira']) : 'Assistente';
+
+        if (empty($nome)) {
+            return ['success' => false, 'message' => 'O nome do docente é obrigatório.'];
+        }
+
+        // 1. Validar e-mail duplicado
+        if ($email) {
+            $stmtCheck = $this->db->prepare("SELECT id FROM docentes WHERE LOWER(email) = ? LIMIT 1");
+            $stmtCheck->execute([$email]);
+            if ($stmtCheck->fetchColumn()) {
+                return ['success' => false, 'message' => "Já existe um docente registado com o e-mail '{$email}'."];
+            }
+        }
+
+        // 2. Avisar sobre nome semelhante caso não tenha sido confirmado
+        if (empty($data['confirm_dup'])) {
+            $stmtName = $this->db->prepare("SELECT nome FROM docentes WHERE LOWER(nome) LIKE ? LIMIT 1");
+            $stmtName->execute(['%' . strtolower($nome) . '%']);
+            $existingName = $stmtName->fetchColumn();
+            if ($existingName) {
+                return [
+                    'success' => false,
+                    'dup_warning' => true,
+                    'message' => "Aviso: Já existe um docente registado com nome semelhante ('{$existingName}'). Deseja cadastrar mesmo assim?"
+                ];
+            }
+        }
+
+        // 3. Inserção do docente no catálogo
+        $stmt = $this->db->prepare("
+            INSERT INTO docentes (nome, email, grau_academico, especialidade, tem_inaarees, tem_agregacao_pedag, categoria_carreira, activo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        ");
+        $res = $stmt->execute([$nome, $email, $grau, $especialidade, $inaarees, $pedag, $categoria]);
+        $newId = (int)$this->db->lastInsertId();
+
+        if ($res) {
+            return ['success' => true, 'docente_id' => $newId, 'message' => 'Docente cadastrado com sucesso no catálogo institucional!'];
+        }
+        return ['success' => false, 'message' => 'Falha ao gravar docente na base de dados.'];
+    }
+
     public function updatePerfilDocente(int $id, array $data): bool {
         $stmt = $this->db->prepare("
             UPDATE docentes 
