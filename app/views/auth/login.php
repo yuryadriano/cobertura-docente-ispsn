@@ -284,6 +284,10 @@ unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_inf
       </div>
 
       <button type="submit" class="btn-submit" style="margin-top:14px;">Entrar no Sistema</button>
+      
+      <div style="text-align:center; margin-top:14px; font-size:12.5px;">
+        <a href="#" class="forgot-link" onclick="switchMode('activate'); return false;">🔑 Primeiro Acesso? Defina a sua palavra-passe aqui</a>
+      </div>
     </form>
   </div>
 
