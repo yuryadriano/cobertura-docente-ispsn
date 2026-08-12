@@ -790,7 +790,16 @@ class ApiController {
         // BOM para abrir acentos no Excel sem desformatar
         fwrite($out, "\xEF\xBB\xBF");
 
-        // Cabeçalho CSV
+        // Cabeçalho Institucional
+        fputcsv($out, ['INSTITUTO SUPERIOR POLITÉCNICO SOL NASCENTE'], ';');
+        fputcsv($out, ['Direção Académica · Mapa Oficial de Cobertura Docente'], ';');
+        fputcsv($out, ['Curso: ' . $curso['nome']], ';');
+        fputcsv($out, ['Ano Letivo: ' . $anoLectivo], ';');
+        fputcsv($out, ['Estado do Plano: ' . ($plano['estado'] ?? 'Rascunho')], ';');
+        fputcsv($out, ['Data de Emissão: ' . date('d/m/Y H:i')], ';');
+        fputcsv($out, [], ';');
+
+        // Cabeçalho de Colunas da Tabela
         fputcsv($out, [
             '#', 'Curso', 'Ano Lectivo', 'Turma', 'Ano Curricular', 'Semestre',
             'Unidade Curricular', 'Carga Horária Semanal', 'Docente Atribuído',
@@ -812,8 +821,8 @@ class ApiController {
                 $l['docente_nome'] ?? 'Sem Docente Atribuído',
                 $l['docente_grau'] ?? '—',
                 $l['docente_especialidade'] ?? '—',
-                $l['docente_inaarees'] ?? '—',
-                $l['docente_agregacao'] ?? '—',
+                $l['tem_inaarees'] ?? '—',
+                $l['tem_agregacao_pedag'] ?? '—',
                 $l['conformidade'] ?? 'Por verificar',
                 $l['justificacao'] ?? '—',
                 $l['regime'] ?? '—',

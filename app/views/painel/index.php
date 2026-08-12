@@ -128,8 +128,8 @@ $docs3 = $docs3Count ?? 16;
                         <td style="padding:12px 16px; text-align:center;">
                             <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
                                 <a href="index.php?page=cobertura&curso_id=<?= $c['curso_id'] ?>" class="btn sm ghost" style="font-weight:700; padding:4px 10px;">Abrir Matriz →</a>
-                                <a href="index.php?page=relatorio_plano&curso_id=<?= $c['curso_id'] ?>" target="_blank" class="btn sm ghost" style="font-weight:700; padding:4px 8px; border-color:var(--blue); color:var(--blue);" title="Imprimir / PDF Oficial">📄 PDF</a>
-                                <a href="index.php?api=exportar_excel&curso_id=<?= $c['curso_id'] ?>" class="btn sm ghost" style="font-weight:700; padding:4px 8px; border-color:#1E8449; color:#1E8449;" title="Descarregar Excel">📊 Excel</a>
+                                <a href="index.php?page=relatorio_plano&curso_id=<?= $c['curso_id'] ?>&ano_lectivo=<?= urlencode(get_ano_lectivo_activo()) ?>" target="_blank" class="btn sm ghost" style="font-weight:700; padding:4px 8px; border-color:var(--blue); color:var(--blue);" title="Imprimir / PDF Oficial">📄 PDF</a>
+                                <a href="index.php?api=exportar_excel&curso_id=<?= $c['curso_id'] ?>&ano_lectivo=<?= urlencode(get_ano_lectivo_activo()) ?>" class="btn sm ghost" style="font-weight:700; padding:4px 8px; border-color:#1E8449; color:#1E8449;" title="Descarregar Excel">📊 Excel</a>
                             </div>
                         </td>
                     </tr>
