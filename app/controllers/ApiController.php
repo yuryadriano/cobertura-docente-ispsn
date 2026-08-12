@@ -11,6 +11,14 @@ require_once __DIR__ . '/../models/DocenteModel.php';
 require_once __DIR__ . '/../models/CursoModel.php';
 require_once __DIR__ . '/../models/PlanoModel.php';
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+
 class ApiController {
     private DocenteModel $docenteModel;
     private CursoModel $cursoModel;
@@ -778,59 +786,221 @@ class ApiController {
 
         $linhas = $this->planoModel->getLinhasPlano($plano['id'], $anoLectivo);
 
-        $filename = "Plano_Cobertura_" . preg_replace('/[^A-Za-z0-9_]/', '_', $curso['nome']) . "_{$anoLectivo}.csv";
+        // Criar folha de cálculo PhpSpreadsheet
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Cobertura Docente');
 
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Pragma: no-cache');
-        header('Expires: 0');
+        // Configuração de alturas das linhas do cabeçalho
+        $sheet->getRowDimension(1)->setRowHeight(20);
+        $sheet->getRowDimension(2)->setRowHeight(20);
+        $sheet->getRowDimension(3)->setRowHeight(20);
+        $sheet->getRowDimension(4)->setRowHeight(6); // Linha divisória
+        $sheet->getRowDimension(5)->setRowHeight(18);
+        $sheet->getRowDimension(6)->setRowHeight(10); // Espaçamento
+        $sheet->getRowDimension(7)->setRowHeight(25); // Cabeçalho da Tabela
 
-        $out = fopen('php://output', 'w');
+        // 1. Inserção do Logótipo (Linha 1-3, Coluna A)
+        $sheet->mergeCells('A1:A3');
+        $logoPath = __DIR__ . '/../../public/assets/img/logo.png';
+        if (file_exists($logoPath)) {
+            try {
+                $drawing = new Drawing();
+                $drawing->setName('Logo ISPSN');
+                $drawing->setDescription('Logo ISPSN');
+                $drawing->setPath($logoPath);
+                $drawing->setCoordinates('A1');
+                $drawing->setHeight(55);
+                $drawing->setOffsetX(4);
+                $drawing->setOffsetY(3);
+                $drawing->setWorksheet($sheet);
+            } catch (\Throwable $e) {
+                // Fallback silencioso caso ambiente não possua extensão GD
+            }
+        }
 
-        // BOM para abrir acentos no Excel sem desformatar
-        fwrite($out, "\xEF\xBB\xBF");
+        // 2. Título Institucional (B1:Q1)
+        $sheet->mergeCells('B1:Q1');
+        $sheet->setCellValue('B1', 'INSTITUTO SUPERIOR POLITÉCNICO SOL NASCENTE');
+        $sheet->getStyle('B1')->getFont()->setSize(15)->setBold(true)->setColor(new Color('1B3A6B'));
+        $sheet->getStyle('B1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
-        // Cabeçalho Institucional
-        fputcsv($out, ['INSTITUTO SUPERIOR POLITÉCNICO SOL NASCENTE'], ';');
-        fputcsv($out, ['Direção Académica · Mapa Oficial de Cobertura Docente'], ';');
-        fputcsv($out, ['Curso: ' . $curso['nome']], ';');
-        fputcsv($out, ['Ano Letivo: ' . $anoLectivo], ';');
-        fputcsv($out, ['Estado do Plano: ' . ($plano['estado'] ?? 'Rascunho')], ';');
-        fputcsv($out, ['Data de Emissão: ' . date('d/m/Y H:i')], ';');
-        fputcsv($out, [], ';');
+        // 3. Subtítulo (B2:Q2)
+        $sheet->mergeCells('B2:Q2');
+        $sheet->setCellValue('B2', 'Direção Académica · Mapa Oficial de Cobertura Docente — Ano Lectivo ' . $anoLectivo);
+        $sheet->getStyle('B2')->getFont()->setSize(11)->setColor(new Color('1B3A6B'));
+        $sheet->getStyle('B2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
-        // Cabeçalho de Colunas da Tabela
-        fputcsv($out, [
+        // 4. Identificação do Curso (B3:Q3)
+        $sheet->mergeCells('B3:Q3');
+        $codigoCurso = !empty($curso['codigo']) ? ' (Código: ' . $curso['codigo'] . ')' : '';
+        $sheet->setCellValue('B3', 'Curso de Licenciatura em ' . $curso['nome'] . $codigoCurso);
+        $sheet->getStyle('B3')->getFont()->setSize(11)->setBold(true)->setColor(new Color('C9971C'));
+        $sheet->getStyle('B3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+
+        // 5. Linha Divisória Âmbar (A4:Q4)
+        $sheet->mergeCells('A4:Q4');
+        $sheet->getStyle('A4:Q4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('C9971C');
+
+        // 6. Metadados do Plano e Emissão (A5:H5 & I5:Q5)
+        $sheet->mergeCells('A5:H5');
+        $sheet->setCellValue('A5', 'Estado do Plano: ' . ($plano['estado'] ?? 'Rascunho'));
+        $sheet->getStyle('A5')->getFont()->setSize(10)->setBold(true)->setColor(new Color('1B3A6B'));
+        $sheet->getStyle('A5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+
+        $sheet->mergeCells('I5:Q5');
+        $sheet->setCellValue('I5', 'Data de Emissão: ' . date('d/m/Y H:i'));
+        $sheet->getStyle('I5')->getFont()->setSize(10)->setColor(new Color('6C757D'));
+        $sheet->getStyle('I5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT)->setVertical(Alignment::VERTICAL_CENTER);
+
+        // 7. Cabeçalho das 17 Colunas de Dados (Linha 7)
+        $headers = [
             '#', 'Curso', 'Ano Lectivo', 'Turma', 'Ano Curricular', 'Semestre',
             'Unidade Curricular', 'Carga Horária Semanal', 'Docente Atribuído',
             'Grau Académico', 'Especialidade', 'INAAREES', 'Capacitação Pedagógica',
             'Conformidade', 'Justificação', 'Regime', 'Parecer'
-        ], ';');
+        ];
+        $sheet->fromArray($headers, null, 'A7');
+        
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => '1B3A6B'],
+                'size' => 10,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'F3F4F6'],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'CBD5E1'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A7:Q7')->applyFromArray($headerStyle);
+        $sheet->getStyle('A7:F7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('H7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('L7:N7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
+        // Fixar a linha de cabeçalho no scroll
+        $sheet->freezePane('A8');
+
+        // 8. Preenchimento e Formatação das Linhas de Dados (Linha 8+)
+        $currentRow = 8;
         $idx = 1;
+
         foreach ($linhas as $l) {
-            fputcsv($out, [
-                $idx++,
-                $curso['nome'],
-                $anoLectivo,
-                $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A'),
-                $l['ano_curricular'] . 'º Ano',
-                $l['semestre'],
-                $l['disciplina_nome'],
-                $l['carga_horaria_semanal'] ?? 0,
-                $l['docente_nome'] ?? 'Sem Docente Atribuído',
-                $l['docente_grau'] ?? '—',
-                $l['docente_especialidade'] ?? '—',
-                $l['tem_inaarees'] ?? '—',
-                $l['tem_agregacao_pedag'] ?? '—',
-                $l['conformidade'] ?? 'Por verificar',
-                $l['justificacao'] ?? '—',
-                $l['regime'] ?? '—',
-                $l['parecer'] ?? '—'
-            ], ';');
+            $conformidade = $l['conformidade'] ?? 'Por verificar';
+
+            $sheet->setCellValue("A{$currentRow}", $idx++);
+            $sheet->setCellValue("B{$currentRow}", $curso['nome']);
+            $sheet->setCellValue("C{$currentRow}", $anoLectivo);
+            $sheet->setCellValue("D{$currentRow}", $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A'));
+            $sheet->setCellValue("E{$currentRow}", $l['ano_curricular'] . 'º Ano');
+            $sheet->setCellValue("F{$currentRow}", $l['semestre']);
+            $sheet->setCellValue("G{$currentRow}", $l['disciplina_nome']);
+            $sheet->setCellValue("H{$currentRow}", $l['carga_horaria_semanal'] ?? 0);
+            $sheet->setCellValue("I{$currentRow}", $l['docente_nome'] ?? 'Sem Docente Atribuído');
+            $sheet->setCellValue("J{$currentRow}", $l['docente_grau'] ?? '—');
+            $sheet->setCellValue("K{$currentRow}", $l['docente_especialidade'] ?? '—');
+            $sheet->setCellValue("L{$currentRow}", $l['tem_inaarees'] ?? '—');
+            $sheet->setCellValue("M{$currentRow}", $l['tem_agregacao_pedag'] ?? '—');
+            $sheet->setCellValue("N{$currentRow}", $conformidade);
+            $sheet->setCellValue("O{$currentRow}", $l['justificacao'] ?? '—');
+            $sheet->setCellValue("P{$currentRow}", $l['regime'] ?? '—');
+            $sheet->setCellValue("Q{$currentRow}", $l['parecer'] ?? '—');
+
+            // Zebra Striping (Linhas pares)
+            if ($currentRow % 2 == 0) {
+                $sheet->getStyle("A{$currentRow}:Q{$currentRow}")->getFill()
+                    ->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('F8F9FA');
+            }
+
+            // Alinhamentos específicos
+            $sheet->getStyle("A{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("C{$currentRow}:F{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("H{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("L{$currentRow}:M{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // Estilização do Badge de Conformidade (Coluna N)
+            $confStyle = $sheet->getStyle("N{$currentRow}");
+            $confStyle->getFont()->setBold(true);
+            $confStyle->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            if ($conformidade === 'Sim') {
+                $confStyle->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D5F5E3');
+                $confStyle->getFont()->setColor(new Color('27AE60'));
+            } elseif ($conformidade === 'Parcial') {
+                $confStyle->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FEF9E7');
+                $confStyle->getFont()->setColor(new Color('B9770E'));
+            } else {
+                $confStyle->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FADBD8');
+                $confStyle->getFont()->setColor(new Color('C0392B'));
+            }
+
+            $currentRow++;
         }
 
-        fclose($out);
+        $lastRow = max($currentRow - 1, 7);
+
+        // Bordas finas cinza claras em toda a tabela
+        if ($lastRow >= 8) {
+            $dataBorders = [
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'D9D9D9'],
+                    ],
+                ],
+            ];
+            $sheet->getStyle("A8:Q{$lastRow}")->applyFromArray($dataBorders);
+        }
+
+        // Largura das Colunas
+        $columnWidths = [
+            'A' => 6,   // #
+            'B' => 26,  // Curso
+            'C' => 14,  // Ano Lectivo
+            'D' => 14,  // Turma
+            'E' => 14,  // Ano Curricular
+            'F' => 14,  // Semestre
+            'G' => 32,  // Unidade Curricular
+            'H' => 18,  // Carga Horária Semanal
+            'I' => 28,  // Docente Atribuído
+            'J' => 16,  // Grau Académico
+            'K' => 24,  // Especialidade
+            'L' => 14,  // INAAREES
+            'M' => 22,  // Capacitação Pedagógica
+            'N' => 16,  // Conformidade
+            'O' => 25,  // Justificação
+            'P' => 16,  // Regime
+            'Q' => 20   // Parecer
+        ];
+
+        foreach ($columnWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
+
+        // 9. Output HTTP Headers para Ficheiro .xlsx
+        $safeCurso = preg_replace('/[^A-Za-z0-9_]/', '_', strtolower($curso['nome']));
+        $safeAno   = preg_replace('/[^A-Za-z0-9_]/', '_', $anoLectivo);
+        $filename  = "cobertura_{$safeCurso}_{$safeAno}.xlsx";
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
         exit;
     }
 
