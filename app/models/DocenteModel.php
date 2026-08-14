@@ -454,13 +454,24 @@ class DocenteModel {
         $docenteId = (int)$doc['docente_id'];
 
         // Tentar remover o ficheiro do disco se existir
-        $relPath = ltrim($doc['caminho_ficheiro'], '/');
+        $rawPath = str_replace('\\', '/', $doc['caminho_ficheiro']);
+        $relPath = ltrim($rawPath, '/');
+        $cleanRelPath = preg_replace('#^public/#i', '', $relPath);
+        $filename = basename($rawPath);
+
         $possiblePaths = [
+            $rawPath,
+            $doc['caminho_ficheiro'],
+            $relPath,
+            __DIR__ . '/../../public/' . $cleanRelPath,
+            __DIR__ . '/../../' . $cleanRelPath,
             __DIR__ . '/../../public/' . $relPath,
-            __DIR__ . '/../../' . $relPath
+            __DIR__ . '/../../' . $relPath,
+            __DIR__ . '/../../public/uploads/docentes/' . $filename,
+            __DIR__ . '/../../uploads/docentes/' . $filename,
         ];
         foreach ($possiblePaths as $p) {
-            if (file_exists($p)) {
+            if (!empty($p) && file_exists($p) && !is_dir($p)) {
                 @unlink($p);
                 break;
             }

@@ -191,13 +191,29 @@ class GestaoEscolarSyncService {
                 carga_horaria_semanal = VALUES(carga_horaria_semanal)
         ");
 
+        // Build a normalized lookup: cleaned JSON key -> original JSON key
+        $normalizedMap = [];
+        foreach ($curriculoMap as $rawKey => $value) {
+            $cleanedKey = $this->cleanEncoding($rawKey);
+            $normalizedMap[mb_strtolower(trim($cleanedKey))] = $rawKey;
+        }
+
         $count = 0;
         foreach ($stmtCursos as $c) {
             $cursoId   = (int)$c['id'];
             $cursoNome = $c['nome'];
+            $cursoNormalized = mb_strtolower(trim($cursoNome));
 
+            // Try exact match first, then normalized match
+            $jsonKey = null;
             if (!empty($curriculoMap[$cursoNome])) {
-                foreach ($curriculoMap[$cursoNome] as $anoStr => $semestres) {
+                $jsonKey = $cursoNome;
+            } elseif (isset($normalizedMap[$cursoNormalized])) {
+                $jsonKey = $normalizedMap[$cursoNormalized];
+            }
+
+            if ($jsonKey && !empty($curriculoMap[$jsonKey])) {
+                foreach ($curriculoMap[$jsonKey] as $anoStr => $semestres) {
                     $anoNum = (int)preg_replace('/[^0-9]/', '', $anoStr);
                     if (!$anoNum) $anoNum = 1;
 

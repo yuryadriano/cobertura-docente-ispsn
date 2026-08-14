@@ -449,16 +449,34 @@ class ApiController {
             exit;
         }
 
-        $relPath = ltrim($doc['caminho_ficheiro'], '/');
+        $rawPath = str_replace('\\', '/', $doc['caminho_ficheiro']);
+        $relPath = ltrim($rawPath, '/');
+        $cleanRelPath = preg_replace('#^public/#i', '', $relPath);
+        $filename = basename($rawPath);
+
         $possiblePaths = [
+            $rawPath,
+            $doc['caminho_ficheiro'],
+            $relPath,
+            __DIR__ . '/../../public/' . $cleanRelPath,
+            __DIR__ . '/../../' . $cleanRelPath,
             __DIR__ . '/../../public/' . $relPath,
             __DIR__ . '/../../' . $relPath,
+            __DIR__ . '/../../public/uploads/docentes/' . $filename,
+            __DIR__ . '/../../uploads/docentes/' . $filename,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/' . $relPath,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/' . $cleanRelPath,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/uploads/docentes/' . $filename,
+            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/' . $relPath,
+            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/' . $cleanRelPath,
+            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/uploads/docentes/' . $filename,
+            'C:/xampp/htdocs/sftcoordenacao/public/' . $cleanRelPath,
             'C:/xampp/htdocs/sftcoordenacao/public/' . $relPath
         ];
 
         $filePath = null;
         foreach ($possiblePaths as $p) {
-            if (file_exists($p)) {
+            if (!empty($p) && file_exists($p) && !is_dir($p)) {
                 $filePath = $p;
                 break;
             }
