@@ -498,10 +498,12 @@ class ApiController {
             exit;
         }
 
-        // Redirecionamento direto para a URL estática sem o prefixo 'public/' que causava o erro 404 do Apache
-        $cleanUrl = preg_replace('#^/?public/#i', '', str_replace('\\', '/', $doc['caminho_ficheiro']));
-        $cleanUrl = ltrim($cleanUrl, '/');
-        header("Location: " . $cleanUrl);
+        header("Content-Type: text/html; charset=utf-8");
+        echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Documento Não Encontrado</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:40px;background:#f1f5f9;color:#1e293b;} .box{border:1px solid #cbd5e1;padding:32px;max-width:520px;margin:40px auto;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.08);text-align:center;} h2{color:#e11d48;margin-top:0;} p{line-height:1.6;font-size:14px;color:#475569;} .btn{display:inline-block;padding:10px 20px;background:#0284c7;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:13px;border:none;cursor:pointer;margin-top:12px;}</style></head><body>";
+        echo "<div class='box'><h2>📄 Ficheiro Não Localizado no Servidor</h2>";
+        echo "<p>O registo deste documento existe na base de dados, mas o ficheiro físico (<b>" . htmlspecialchars($filename) . "</b>) não se encontra no directório de uploads do servidor.</p>";
+        echo "<button onclick='window.close()' class='btn'>Fechar Janela</button>";
+        echo "</div></body></html>";
         exit;
     }
 

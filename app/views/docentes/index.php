@@ -233,8 +233,7 @@ window.selectDocente = async (docenteInput, rowElement) => {
                 <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
                     ${items.map(item => {
                         const fileName = item.caminho_ficheiro.split('/').pop();
-                        const rawUrl = item.caminho_ficheiro || '#';
-                        const viewUrl = rawUrl.replace(/^(\/)?public\//i, '');
+                        const viewUrl = `index.php?api=docente_ver_documento&id=${item.id}`;
                         const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('pt-PT') : '';
                         return `
                             <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
