@@ -482,27 +482,37 @@ class ApiController {
             }
         }
 
-        if (!$filePath) {
-            header("HTTP/1.1 404 Not Found");
-            echo "Ficheiro não encontrado no servidor de ficheiros.";
+        if ($filePath) {
+            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'pdf'  => 'application/pdf',
+                'png'  => 'image/png',
+                'jpg'  => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'doc'  => 'application/msword',
+                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+
+            $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
+            header("Content-Type: {$mime}");
+            header("Content-Disposition: inline; filename=\"" . basename($filePath) . "\"");
+            header("Content-Length: " . filesize($filePath));
+            readfile($filePath);
             exit;
         }
 
-        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-        $mimeTypes = [
-            'pdf'  => 'application/pdf',
-            'png'  => 'image/png',
-            'jpg'  => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'doc'  => 'application/msword',
-            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ];
+        // Redirecionamento de segurança para URL estática caso a resolução física do PHP não encontre o ficheiro
+        $redirectPath = $doc['caminho_ficheiro'];
+        if (!empty($redirectPath)) {
+            if (!preg_match('#^https?://#i', $redirectPath)) {
+                $redirectPath = ltrim(str_replace('\\', '/', $redirectPath), '/');
+            }
+            header("Location: " . $redirectPath);
+            exit;
+        }
 
-        $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
-        header("Content-Type: {$mime}");
-        header("Content-Disposition: inline; filename=\"" . basename($filePath) . "\"");
-        header("Content-Length: " . filesize($filePath));
-        readfile($filePath);
+        header("HTTP/1.1 404 Not Found");
+        echo "Ficheiro não encontrado no servidor de ficheiros.";
         exit;
     }
 
