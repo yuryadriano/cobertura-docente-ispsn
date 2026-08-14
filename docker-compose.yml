@@ -17,6 +17,9 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - uploads-docentes:/var/www/html/public/uploads
+      - app-backups:/var/www/html/storage/backups
 
   # ─────────────────────────────────────────────────────────────────
   # SERVIÇO DA BASE DE DADOS MYSQL
@@ -53,3 +56,5 @@ services:
 
 volumes:
   mysql-data:
+  uploads-docentes:
+  app-backups:
