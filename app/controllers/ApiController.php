@@ -50,6 +50,9 @@ class ApiController {
             case 'plano_estado':
                 $this->alterarEstadoPlano();
                 break;
+            case 'docente_criar':
+                $this->criarDocente();
+                break;
             case 'docente_salvar':
                 $this->salvarDocente();
                 break;
