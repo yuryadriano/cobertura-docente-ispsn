@@ -455,23 +455,20 @@ class ApiController {
         $filename = basename($rawPath);
 
         $possiblePaths = [
+            __DIR__ . '/../../public/' . $cleanRelPath,
+            __DIR__ . '/../../' . $cleanRelPath,
+            __DIR__ . '/../../public/uploads/docentes/' . $filename,
+            __DIR__ . '/../../uploads/docentes/' . $filename,
+            __DIR__ . '/../public/' . $cleanRelPath,
+            __DIR__ . '/../uploads/docentes/' . $filename,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/' . $cleanRelPath,
+            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/uploads/docentes/' . $filename,
+            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/' . $cleanRelPath,
+            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/uploads/docentes/' . $filename,
             $rawPath,
             $doc['caminho_ficheiro'],
             $relPath,
-            __DIR__ . '/../../public/' . $cleanRelPath,
-            __DIR__ . '/../../' . $cleanRelPath,
-            __DIR__ . '/../../public/' . $relPath,
-            __DIR__ . '/../../' . $relPath,
-            __DIR__ . '/../../public/uploads/docentes/' . $filename,
-            __DIR__ . '/../../uploads/docentes/' . $filename,
-            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/' . $relPath,
-            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/' . $cleanRelPath,
-            ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/uploads/docentes/' . $filename,
-            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/' . $relPath,
-            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/' . $cleanRelPath,
-            dirname($_SERVER['SCRIPT_FILENAME'] ?? '') . '/uploads/docentes/' . $filename,
-            'C:/xampp/htdocs/sftcoordenacao/public/' . $cleanRelPath,
-            'C:/xampp/htdocs/sftcoordenacao/public/' . $relPath
+            $cleanRelPath
         ];
 
         $filePath = null;
@@ -501,18 +498,10 @@ class ApiController {
             exit;
         }
 
-        // Redirecionamento de segurança para URL estática caso a resolução física do PHP não encontre o ficheiro
-        $redirectPath = $doc['caminho_ficheiro'];
-        if (!empty($redirectPath)) {
-            if (!preg_match('#^https?://#i', $redirectPath)) {
-                $redirectPath = ltrim(str_replace('\\', '/', $redirectPath), '/');
-            }
-            header("Location: " . $redirectPath);
-            exit;
-        }
-
-        header("HTTP/1.1 404 Not Found");
-        echo "Ficheiro não encontrado no servidor de ficheiros.";
+        // Redirecionamento direto para a URL estática sem o prefixo 'public/' que causava o erro 404 do Apache
+        $cleanUrl = preg_replace('#^/?public/#i', '', str_replace('\\', '/', $doc['caminho_ficheiro']));
+        $cleanUrl = ltrim($cleanUrl, '/');
+        header("Location: " . $cleanUrl);
         exit;
     }
 
