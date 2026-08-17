@@ -271,7 +271,7 @@ LEFT JOIN `turmas` t ON lc.turma_id = t.id
 LEFT JOIN `docentes` doc ON lc.docente_id = doc.id
 LEFT JOIN `vw_docentes_capacidade_carga` cap ON lc.docente_id = cap.docente_id;
 
-CREATE OR REPLACE VIEW `vw_matchmaking_docentes` AS
+CREATE OR REPLACE DEFINER=`root`@`%` SQL SECURITY DEFINER VIEW `vw_matchmaking_docentes` AS
 SELECT 
     disc.id AS disciplina_id,
     disc.nome AS disciplina_nome,
@@ -341,7 +341,7 @@ LEFT JOIN `linhas_cobertura` lc ON pc.id = lc.plano_id
 WHERE c.activo = 1
 GROUP BY c.id, c.codigo, c.nome, pc.ano_lectivo, pc.estado;
 
-CREATE OR REPLACE VIEW `vw_docentes_sobrecarga` AS
+CREATE OR REPLACE DEFINER=`root`@`%` SQL SECURITY DEFINER VIEW `vw_docentes_sobrecarga` AS
 SELECT 
     docente_id,
     docente_nome,
@@ -351,7 +351,7 @@ SELECT
 FROM `vw_docentes_capacidade_carga`
 WHERE estado_capacidade = 'Sobregregado';
 
-CREATE OR REPLACE VIEW `vw_resumo_documental` AS
+CREATE OR REPLACE DEFINER=`root`@`%` SQL SECURITY DEFINER VIEW `vw_resumo_documental` AS
 SELECT 
     d.id AS docente_id,
     d.nome AS docente_nome,
