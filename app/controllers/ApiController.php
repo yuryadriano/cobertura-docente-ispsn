@@ -122,6 +122,9 @@ class ApiController {
             case 'cv_salvar':
                 $this->salvarCV();
                 break;
+            case 'cv_remover_foto':
+                $this->removerFotoCV();
+                break;
             case 'turmas':
                 $this->getTurmas();
                 break;
@@ -519,11 +522,49 @@ class ApiController {
         if (!$id) {
             Response::error('ID do documento é obrigatório.');
         }
+
+        $db = Database::getInstance();
+        $stmtDoc = $db->prepare("SELECT docente_id FROM documentos_docentes WHERE id = ?");
+        $stmtDoc->execute([$id]);
+        $docenteId = (int)$stmtDoc->fetchColumn();
+
         $res = $this->docenteModel->deleteDocumento($id);
         if ($res) {
-            Response::success('Documento eliminado com sucesso.');
+            $totalValidos = 0;
+            if ($docenteId > 0) {
+                $stmtCount = $db->prepare("SELECT COUNT(DISTINCT tipo) FROM documentos_docentes WHERE docente_id = ? AND estado = 'Válido'");
+                $stmtCount->execute([$docenteId]);
+                $totalValidos = (int)$stmtCount->fetchColumn();
+            }
+            Response::success('Documento eliminado com sucesso.', [
+                'docente_id'         => $docenteId,
+                'total_docs_validos' => $totalValidos
+            ]);
         } else {
             Response::error('Falha ao eliminar documento.');
+        }
+    }
+
+    private function removerFotoCV(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Response::error('Método HTTP inválido.', 405);
+        }
+        if (!Auth::check()) {
+            Response::error('Sessão não iniciada.', 401);
+        }
+        if (!Auth::hasRole(['grh', 'admin'])) {
+            Response::error('Sem permissão para remover foto do docente.', 403);
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $docenteId = (int)($input['docente_id'] ?? 0);
+        if (!$docenteId) {
+            Response::error('docente_id é obrigatório.');
+        }
+        $res = $this->docenteModel->removerFotoCV($docenteId);
+        if ($res) {
+            Response::success('Foto removida com sucesso.');
+        } else {
+            Response::error('Falha ao remover foto.');
         }
     }
 

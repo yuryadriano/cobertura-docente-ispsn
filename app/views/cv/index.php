@@ -80,7 +80,10 @@ $preDocId = (int)($_GET['docente_id'] ?? 0);
                         <span style="text-align:center; padding:10px;">👤<br>Sem foto</span>
                     </div>
                     <input type="file" id="cv-foto-input" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="window.previewFoto(event)">
-                    <button type="button" class="btn sm ghost" onclick="document.getElementById('cv-foto-input').click()" style="font-size:11px;">📷 Alterar foto</button>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <button type="button" class="btn sm ghost" onclick="document.getElementById('cv-foto-input').click()" style="font-size:11px;">📷 Alterar foto</button>
+                        <button type="button" id="cv-btn-remover-foto" class="btn sm ghost" onclick="window.removerFoto()" style="font-size:11px; color:var(--bad); border-color:var(--bad); display:none;">🗑️ Remover foto</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -369,9 +372,14 @@ function preencherFormulario(cv) {
     document.getElementById('cv-outras-atividades').value    = cv.outras_atividades || '';
 
     // Foto
+    const prev = document.getElementById('cv-foto-preview');
+    const btnRemoverFoto = document.getElementById('cv-btn-remover-foto');
     if (cv.foto_path) {
-        const prev = document.getElementById('cv-foto-preview');
         prev.innerHTML = `<img src="${cv.foto_path}" style="width:100%;height:100%;object-fit:cover;">`;
+        if (btnRemoverFoto) btnRemoverFoto.style.display = 'block';
+    } else {
+        prev.innerHTML = `<span style="text-align:center; padding:10px;">👤<br>Sem foto</span>`;
+        if (btnRemoverFoto) btnRemoverFoto.style.display = 'none';
     }
 
     // Formações dinâmicas
@@ -526,8 +534,36 @@ window.previewFoto = (event) => {
     reader.onload = (e) => {
         document.getElementById('cv-foto-preview').innerHTML =
             `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+        const btnRemoverFoto = document.getElementById('cv-btn-remover-foto');
+        if (btnRemoverFoto) btnRemoverFoto.style.display = 'block';
     };
     reader.readAsDataURL(file);
+};
+
+window.removerFoto = async () => {
+    const docenteId = document.getElementById('cv-docente-id').value;
+    if (!docenteId) return;
+    if (!confirm('Tem a certeza que deseja remover a foto deste docente?')) return;
+
+    try {
+        const res = await fetch('index.php?api=cv_remover_foto', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ docente_id: parseInt(docenteId) })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('cv-foto-preview').innerHTML = `<span style="text-align:center; padding:10px;">👤<br>Sem foto</span>`;
+            document.getElementById('cv-foto-input').value = '';
+            const btnRemoverFoto = document.getElementById('cv-btn-remover-foto');
+            if (btnRemoverFoto) btnRemoverFoto.style.display = 'none';
+            alert('✅ Foto removida com sucesso.');
+        } else {
+            alert('⚠️ ' + (data.error || 'Erro ao remover foto.'));
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao remover foto.');
+    }
 };
 
 // ──────────────────────────────────────────────────────

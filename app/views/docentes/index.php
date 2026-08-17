@@ -222,6 +222,20 @@ window.selectDocente = async (docenteInput, rowElement) => {
 
     const badgeClass = loadedCount >= 5 ? 'ok' : (loadedCount >= 3 ? 'warn' : 'bad');
 
+    // Sincronizar badge numérico na lista lateral esquerda e no cache em memória
+    const miniBadge = document.getElementById(`mini-badge-${docenteId}`);
+    if (miniBadge) {
+        miniBadge.textContent = `${loadedCount}/6`;
+        miniBadge.className = `pill ${badgeClass}`;
+    }
+    if (d) {
+        d.total_docs_validos = loadedCount;
+    }
+    const cachedDoc = Array.isArray(window.ALL_DOCENTES) ? window.ALL_DOCENTES.find(item => item.id == docenteId) : null;
+    if (cachedDoc) {
+        cachedDoc.total_docs_validos = loadedCount;
+    }
+
     const cardsHtml = DOCTYPES.map(([k, title, desc]) => {
         const dbKey = typeToKeyMap[k] || k;
         const items = docsMap[dbKey] || [];
@@ -303,8 +317,9 @@ window.eliminarDoc = async (docId, docenteId) => {
         const data = await res.json();
         if (data.success) {
             alert('✅ Documento eliminado com sucesso.');
-            if (window.SELECTED_DOCENTE && window.SELECTED_DOCENTE.id == docenteId) {
-                window.selectDocente(window.SELECTED_DOCENTE);
+            const targetDoc = window.SELECTED_DOCENTE || (Array.isArray(window.ALL_DOCENTES) ? window.ALL_DOCENTES.find(item => item.id == docenteId) : null);
+            if (targetDoc) {
+                await window.selectDocente(targetDoc);
             }
         } else {
             alert('⚠️ Erro ao eliminar documento: ' + (data.error || data.message || 'Erro desconhecido.'));

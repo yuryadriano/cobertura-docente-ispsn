@@ -452,6 +452,7 @@ class DocenteModel {
         if (!$doc) return false;
 
         $docenteId = (int)$doc['docente_id'];
+        $tipoDoc = $doc['tipo'] ?? '';
 
         // Tentar remover o ficheiro do disco se existir
         $rawPath = str_replace('\\', '/', $doc['caminho_ficheiro']);
@@ -480,9 +481,51 @@ class DocenteModel {
         $stmt = $this->db->prepare("DELETE FROM documentos_docentes WHERE id = ?");
         $res = $stmt->execute([$docId]);
         if ($res) {
+            // Se o documento era INAAREES ou Agregação Pedagógica, verificar se ainda resta algum válido
+            if ($tipoDoc === 'inaarees' || $tipoDoc === 'ina') {
+                $stmtCheckIna = $this->db->prepare("SELECT COUNT(*) FROM documentos_docentes WHERE docente_id = ? AND tipo IN ('inaarees', 'ina') AND estado = 'Válido'");
+                $stmtCheckIna->execute([$docenteId]);
+                if ((int)$stmtCheckIna->fetchColumn() === 0) {
+                    $this->db->prepare("UPDATE docentes SET tem_inaarees = 'Não' WHERE id = ?")->execute([$docenteId]);
+                }
+            } elseif ($tipoDoc === 'agregacao_pedag' || $tipoDoc === 'ped') {
+                $stmtCheckPed = $this->db->prepare("SELECT COUNT(*) FROM documentos_docentes WHERE docente_id = ? AND tipo IN ('agregacao_pedag', 'ped') AND estado = 'Válido'");
+                $stmtCheckPed->execute([$docenteId]);
+                if ((int)$stmtCheckPed->fetchColumn() === 0) {
+                    $this->db->prepare("UPDATE docentes SET tem_agregacao_pedag = 'Não' WHERE id = ?")->execute([$docenteId]);
+                }
+            }
+
             $this->recalcularConformidadeDocenteEmTodosPlanos($docenteId);
         }
         return $res;
+    }
+
+    public function removerFotoCV(int $docenteId): bool {
+        $stmt = $this->db->prepare("SELECT foto_path FROM cvs_estruturados WHERE docente_id = ?");
+        $stmt->execute([$docenteId]);
+        $fotoPath = $stmt->fetchColumn();
+        if ($fotoPath) {
+            $rawPath = str_replace('\\', '/', $fotoPath);
+            $relPath = ltrim($rawPath, '/');
+            $cleanRelPath = preg_replace('#^public/#i', '', $relPath);
+            $filename = basename($rawPath);
+            $possiblePaths = [
+                __DIR__ . '/../../public/' . $cleanRelPath,
+                __DIR__ . '/../../' . $cleanRelPath,
+                __DIR__ . '/../../public/uploads/docentes/' . $filename,
+                __DIR__ . '/../../uploads/docentes/' . $filename,
+                $rawPath
+            ];
+            foreach ($possiblePaths as $p) {
+                if (!empty($p) && file_exists($p) && !is_dir($p)) {
+                    @unlink($p);
+                    break;
+                }
+            }
+        }
+        $stmtUp = $this->db->prepare("UPDATE cvs_estruturados SET foto_path = '' WHERE docente_id = ?");
+        return $stmtUp->execute([$docenteId]);
     }
 
     public function updateDocumentoEstado(int $docId, string $estado, ?int $validadoPor = null): bool {
