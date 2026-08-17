@@ -106,10 +106,25 @@ document.addEventListener('DOMContentLoaded', () => {
         linhasData.forEach(l => {
             const cod = l.turma_nome || `TURMA-${l.ano_curricular}A`;
             if (!setMap.has(cod)) {
+                let turno = l.turno;
+                if (!turno) {
+                    const matchParen = cod.match(/\(([^)]+)\)/);
+                    if (matchParen && matchParen[1]) {
+                        turno = matchParen[1].trim();
+                    } else {
+                        const matchCode = cod.match(/[0-9]+([MPTN])(?:\s|$)/i);
+                        if (matchCode) {
+                            const code = matchCode[1].toUpperCase();
+                            turno = code === 'P' ? 'Pós-Laboral' : code === 'N' ? 'Noite' : code === 'T' ? 'Tarde' : 'Manhã';
+                        } else {
+                            turno = 'Manhã';
+                        }
+                    }
+                }
                 setMap.set(cod, {
                     cod: cod,
                     ano: parseInt(l.ano_curricular) || 1,
-                    turno: l.turno || (cod.includes('N') ? 'Noite' : cod.includes('T') ? 'Tarde' : 'Manhã')
+                    turno: turno
                 });
             }
         });

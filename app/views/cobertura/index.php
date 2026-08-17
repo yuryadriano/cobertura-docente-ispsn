@@ -97,7 +97,10 @@ window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
                     <tr style="background:#f4f2ec; border-bottom:1px solid var(--line); text-align:left;">
                         <th style="padding:10px 8px; font-size:11px; width:30px;">#</th>
                         <th style="padding:10px 8px; font-size:11px; min-width:170px;">Unidade Curricular</th>
-                        <th style="padding:10px 8px; font-size:11px; min-width:200px;">Docente da turma</th>
+                        <th style="padding:10px 8px; font-size:11px; min-width:200px;" title="Apenas um docente responsável por linha de cobertura">
+                            Docente da turma
+                            <span style="font-size:9.5px; font-weight:normal; color:var(--mut); display:block; margin-top:2px;">(1 docente responsável por linha)</span>
+                        </th>
                         <th style="padding:10px 8px; font-size:11px;">Grau (auto)</th>
                         <th style="padding:10px 8px; font-size:11px;">Especialidade (auto)</th>
                         <th style="padding:10px 8px; font-size:11px;">INAAREES</th>
