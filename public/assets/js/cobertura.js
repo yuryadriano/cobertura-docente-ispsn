@@ -108,37 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!setMap.has(cod)) {
                 let turno = l.turno;
                 if (!turno) {
-                    const matchParen = cod.match(/\(([^)]+)\)/);
-                    if (matchParen && matchParen[1]) {
-                        const content = matchParen[1].trim();
-                        const normalized = content.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-                        if (normalized === 'manha') {
-                            turno = 'Manhã';
-                        } else if (normalized === 'tarde') {
-                            turno = 'Tarde';
-                        } else if (normalized === 'noite') {
-                            turno = 'Noite';
-                        } else if (normalized === 'pos-laboral' || normalized === 'poslaboral') {
-                            turno = 'Pós-Laboral';
-                        } else {
-                            const matchSigla = content.match(/^[A-Z]{2,4}\d([MTPN])[A-Z]$/i);
-                            if (matchSigla) {
-                                const letter = matchSigla[1].toUpperCase();
-                                turno = letter === 'P' ? 'Pós-Laboral' : letter === 'N' ? 'Noite' : letter === 'T' ? 'Tarde' : 'Manhã';
-                            }
-                        }
-                    }
-
-                    if (!turno) {
-                        const matchDirectSigla = cod.match(/[0-9]+([MPTN])(?:\s|$|[A-Z])/i);
-                        if (matchDirectSigla) {
-                            const code = matchDirectSigla[1].toUpperCase();
-                            turno = code === 'P' ? 'Pós-Laboral' : code === 'N' ? 'Noite' : code === 'T' ? 'Tarde' : 'Manhã';
-                        } else {
-                            turno = 'Manhã';
-                        }
-                    }
+                    console.warn(`[cobertura.js] Turma sem turno explícito vindo da BD: ${cod}. Usando fallback 'Manhã'.`);
+                    turno = 'Manhã';
                 }
                 setMap.set(cod, {
                     cod: cod,
