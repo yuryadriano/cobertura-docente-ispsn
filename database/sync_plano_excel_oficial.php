@@ -280,7 +280,12 @@ try {
     echo "  INICIANDO TRANSAÇÃO ATÓMICA DE LIMPEZA E RECONSTRUÇÃO (ACID)          \n";
     echo "========================================================================\n\n";
 
+    $db->exec("SET FOREIGN_KEY_CHECKS = 0");
     $db->beginTransaction();
+
+    // Obter lista de IDs de docentes válidos para garantir integridade referencial
+    $validDocenteIds = $db->query("SELECT id FROM docentes")->fetchAll(PDO::FETCH_COLUMN);
+    $validDocentesMap = array_flip($validDocenteIds);
 
     // 3. Atualizar Schema e Vistas
     echo "3. Padronizando estrutura da tabela 'turmas' e vista SQL...\n";
@@ -374,14 +379,17 @@ try {
 
                     if (isset($embeddedAssignments[$discId])) {
                         $saved = $embeddedAssignments[$discId];
-                        $docenteId = (int)$saved['d'];
-                        $conf = $saved['c'] ?: 'Sim';
-                        $just = $saved['j'] ?: 'Preservado do histórico institucional';
-                        $regime = $saved['r'] ?: 'Tempo Parcial';
-                        $parecer = $saved['p'] ?: 'Manter';
-                        $decisao = $saved['a'] ?: 'Aprovar';
-                        $obs = $saved['o'];
-                        $totalAtribuicoesRestauradas++;
+                        $candidateId = (int)$saved['d'];
+                        if ($candidateId > 0 && isset($validDocentesMap[$candidateId])) {
+                            $docenteId = $candidateId;
+                            $conf = $saved['c'] ?: 'Sim';
+                            $just = $saved['j'] ?: 'Preservado do histórico institucional';
+                            $regime = $saved['r'] ?: 'Tempo Parcial';
+                            $parecer = $saved['p'] ?: 'Manter';
+                            $decisao = $saved['a'] ?: 'Aprovar';
+                            $obs = $saved['o'];
+                            $totalAtribuicoesRestauradas++;
+                        }
                     }
 
                     // Inserir Turma
@@ -469,6 +477,8 @@ try {
         LEFT JOIN docentes doc ON lc.docente_id = doc.id
         LEFT JOIN vw_docentes_capacidade_carga cap ON lc.docente_id = cap.docente_id
     ");
+
+    $db->exec("SET FOREIGN_KEY_CHECKS = 1");
 
     if ($db->inTransaction()) {
         $db->commit();
