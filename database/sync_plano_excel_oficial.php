@@ -337,6 +337,32 @@ try {
             $planoId = (int)$db->lastInsertId();
         }
 
+        // Garantir que as 12 disciplinas oficiais do 3.º Ano de Fisioterapia estão cadastradas
+        if ($cursoCod === 'FISI') {
+            $fisi3 = [
+                ['nome' => 'Fisioterapia Cardiorrespiratória', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia em Traumatologia e Ortopedia', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Farmacologia Aplicada à Fisioterapia', 'sem' => 'I', 'carga' => 3, 'cred' => 3],
+                ['nome' => 'Bioética e Deontologia Profissional', 'sem' => 'I', 'carga' => 2, 'cred' => 2],
+                ['nome' => 'Métodos e Técnicas de Avaliação em Fisioterapia', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia em Reumatologia', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia em Cuidados Intensivos', 'sem' => 'II', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia Dermatofuncional', 'sem' => 'II', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia Desportiva e Atividade Física', 'sem' => 'II', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia Preventiva e Ergonómica', 'sem' => 'II', 'carga' => 3, 'cred' => 3],
+                ['nome' => 'Estágio Curricular Supervisionado I', 'sem' => 'II', 'carga' => 8, 'cred' => 6],
+                ['nome' => 'Metodologia de Investigação Científica Aplicada', 'sem' => 'II', 'carga' => 3, 'cred' => 3],
+            ];
+            $stmtCheckD = $db->prepare("SELECT id FROM disciplinas WHERE curso_id = ? AND ano_curricular = 3 AND TRIM(LOWER(nome)) = ? LIMIT 1");
+            $stmtInsD = $db->prepare("INSERT INTO disciplinas (curso_id, nome, ano_curricular, semestre, carga_horaria_semanal, creditos, activo) VALUES (?, ?, 3, ?, ?, ?, 1)");
+            foreach ($fisi3 as $fuc) {
+                $stmtCheckD->execute([$cursoId, strtolower(trim($fuc['nome']))]);
+                if (!$stmtCheckD->fetchColumn()) {
+                    $stmtInsD->execute([$cursoId, $fuc['nome'], $fuc['sem'], $fuc['carga'], $fuc['cred']]);
+                }
+            }
+        }
+
         // Obter disciplinas do curso agrupadas por ano
         $stmtGetDiscs->execute([$cursoId]);
         $disciplinas = $stmtGetDiscs->fetchAll(PDO::FETCH_ASSOC);
