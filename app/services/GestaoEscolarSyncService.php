@@ -248,10 +248,11 @@ class GestaoEscolarSyncService {
         if (empty($stmtDiscs)) return 0;
 
         $stmtTurma = $this->db->prepare("
-            INSERT INTO turmas (id, disciplina_id, docente_id, designacao, sumarios_registados, sumarios_previstos, programa_carregado, dosificacao_carregada, notas_no_prazo, inquerito_media)
-            VALUES (:id, :disciplina_id, NULL, :designacao, :sum_reg, 200, 1, 1, 'Sim', 4.20)
+            INSERT INTO turmas (id, disciplina_id, docente_id, designacao, turno, sumarios_registados, sumarios_previstos, programa_carregado, dosificacao_carregada, notas_no_prazo, inquerito_media)
+            VALUES (:id, :disciplina_id, NULL, :designacao, :turno, :sum_reg, 200, 1, 1, 'Sim', 4.20)
             ON DUPLICATE KEY UPDATE
-                designacao = VALUES(designacao)
+                designacao = VALUES(designacao),
+                turno = VALUES(turno)
         ");
 
         $count = 0;
@@ -270,6 +271,7 @@ class GestaoEscolarSyncService {
                     ':id'            => $turmaId,
                     ':disciplina_id' => $discId,
                     ':designacao'    => $designacao,
+                    ':turno'         => $tNome,
                     ':sum_reg'       => rand(140, 195)
                 ]);
                 $count++;
