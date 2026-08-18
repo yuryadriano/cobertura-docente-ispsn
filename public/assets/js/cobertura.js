@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         let rowCounter = 1;
+        const baseDocentesOpts = docentesList.map(d => `<option value="${d.id}">${d.nome}</option>`).join('');
 
         const renderGroup = (linhasGroup, semTitle) => {
             if (linhasGroup.length === 0) return '';
@@ -311,9 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
             linhasGroup.forEach(l => {
                 const doc = docentesMap[l.docente_id] || (l.docente_nome ? docentesMap[l.docente_nome] : null);
 
-                const opts = `<option value="">— escolher —</option>` + docentesList.map(d => 
-                    `<option value="${d.id}" ${d.id == l.docente_id ? 'selected' : ''}>${d.nome}</option>`
-                ).join('');
+                let opts = '<option value="">— escolher —</option>';
+                if (l.docente_id) {
+                    opts += baseDocentesOpts.replace(`value="${l.docente_id}"`, `value="${l.docente_id}" selected`);
+                } else {
+                    opts += baseDocentesOpts;
+                }
 
                 const sug2025 = l.sugestao_2025 || l.docente_anterior || '';
                 const sugHtml = (sug2025 && !l.docente_id) 
