@@ -6,6 +6,7 @@
 ?>
 <script>
 window.CURRENT_USER_ROLE = "<?= Auth::user()['perfil'] ?? 'coordenador' ?>";
+window.CURRENT_USER_CURSO_ID = <?= Auth::user()['curso_id'] ? (int)Auth::user()['curso_id'] : 'null' ?>;
 window.CURRENT_ANO_LECTIVO = "<?= get_ano_lectivo_activo() ?>";
 </script>
 

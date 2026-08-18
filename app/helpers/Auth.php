@@ -375,7 +375,7 @@ class Auth {
     public static function canEditCourse(int $cursoId): bool {
         if (!self::check()) return false;
         $user = $_SESSION['user'];
-        if (in_array($user['perfil'], ['admin', 'gestor_academico'])) {
+        if (in_array($user['perfil'], ['admin', 'gestor_academico', 'chefe_departamento', 'presidente'])) {
             return true;
         }
         if ($user['perfil'] === 'coordenador') {

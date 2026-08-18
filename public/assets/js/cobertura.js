@@ -39,11 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (data.success && data.data.length > 0) {
                 if (cursoSelect) {
-                    cursoSelect.innerHTML = data.data.map(c => 
-                        `<option value="${c.id}" data-nome="${c.nome}">${c.nome}</option>`
-                    ).join('');
-                    currentCursoId = parseInt(data.data[0].id);
-                    currentCursoNome = data.data[0].nome;
+                    const userCursoId = window.CURRENT_USER_CURSO_ID;
+                    const matchedCurso = userCursoId ? data.data.find(c => parseInt(c.id) === parseInt(userCursoId)) : null;
+                    const selectedCurso = matchedCurso || data.data[0];
+
+                    cursoSelect.innerHTML = data.data.map(c => {
+                        const isSel = (parseInt(c.id) === parseInt(selectedCurso.id)) ? 'selected' : '';
+                        return `<option value="${c.id}" data-nome="${c.nome}" ${isSel}>${c.nome}</option>`;
+                    }).join('');
+
+                    currentCursoId = parseInt(selectedCurso.id);
+                    currentCursoNome = selectedCurso.nome;
 
                     cursoSelect.addEventListener('change', (e) => {
                         currentCursoId = parseInt(e.target.value);
@@ -246,9 +252,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const canEditCoverage = ['coordenador', 'chefe_departamento', 'presidente', 'admin'].includes(userRole);
+        const userRole = window.CURRENT_USER_ROLE || 'coordenador';
+        const userCursoId = window.CURRENT_USER_CURSO_ID;
+
+        let canEditCoverage = false;
+        if (['admin', 'chefe_departamento', 'presidente'].includes(userRole)) {
+            canEditCoverage = true;
+        } else if (userRole === 'coordenador') {
+            canEditCoverage = (!userCursoId || parseInt(userCursoId) === parseInt(currentCursoId));
+        }
+
         const isPlanLocked = planoData ? ['Validado'].includes(planoData.estado) : false;
-        // O plano fica bloqueado apenas se já estiver totalmente Validado (exceto para Admin)
+        // O plano fica bloqueado se o perfil não tiver permissão para este curso ou se já estiver Validado (exceto Admin)
         const isLocked = !canEditCoverage || (isPlanLocked && userRole !== 'admin');
         const disabledAttr = isLocked ? 'disabled' : '';
 
@@ -256,7 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bannerReadOnly) {
             if (isLocked && planoData) {
                 bannerReadOnly.style.display = 'block';
-                if (!canEditCoverage) {
+                if (userRole === 'coordenador' && userCursoId && parseInt(userCursoId) !== parseInt(currentCursoId)) {
+                    bannerReadOnly.innerHTML = `<b>🔒 Modo Só Leitura</b> — O seu perfil de <b>Coordenador de Curso</b> tem permissão de edição apenas no seu curso atribuído. Ao consultar este curso, os campos encontram-se bloqueados para alteração.`;
+                } else if (!canEditCoverage) {
                     bannerReadOnly.innerHTML = `<b>🔒 Modo Só Leitura</b> — O perfil «<b>${userRole}</b>» apenas consulta a cobertura docente. O preenchimento é da responsabilidade exclusiva do <b>Coordenador de Curso</b>.`;
                 } else {
                     bannerReadOnly.innerHTML = `<b>🔒 Plano ${planoData.estado}</b> — Este plano de cobertura já foi <b>${planoData.estado.toLowerCase()}</b> e encontra-se bloqueado para alterações pelo Coordenador de Curso.`;
