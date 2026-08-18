@@ -106,8 +106,27 @@ class Auth {
         $email = trim(strtolower($email));
         if (empty($email)) return null;
 
+        // Mapeamento de Aliases e Grafias Institucionais Conhecidas
+        $aliasMap = [
+            'kianguembeni.canania@ispsn.org' => 'kianguenbeni.canania@ispsn.org',
+            'kianguenbeni.canania@ispsn.org' => 'kianguenbeni.canania@ispsn.org',
+            'kianguembeni.canania'          => 'kianguenbeni.canania@ispsn.org',
+            'kianguenbeni.canania'          => 'kianguenbeni.canania@ispsn.org',
+            'deuladeu.ferramenta@ispsn.org' => 'deuladeu.ferramenta@ispsn.org',
+            'deoladeu.ferramenta@ispsn.org' => 'deuladeu.ferramenta@ispsn.org',
+            'sebastiao.joaquim@ispsn.org'   => 'sebastao.joaquim@ispsn.org',
+            'sebastao.joaquim@ispsn.org'    => 'sebastao.joaquim@ispsn.org'
+        ];
+
         // Se o utilizador não digitou '@', acrescenta automaticamente '@ispsn.org'
         $fullEmail = (strpos($email, '@') === false) ? ($email . '@ispsn.org') : $email;
+
+        // Se houver alias conhecido, verificar pelo e-mail primário
+        if (isset($aliasMap[$fullEmail])) {
+            $fullEmail = $aliasMap[$fullEmail];
+        } elseif (isset($aliasMap[$email])) {
+            $fullEmail = $aliasMap[$email];
+        }
 
         $db = Database::getInstance();
         // 1. Pesquisa exata por e-mail completo
@@ -115,7 +134,7 @@ class Auth {
         $stmt->execute([$fullEmail]);
         $user = $stmt->fetch();
 
-        // 2. Se não encontrar por e-mail exato, tenta por prefixo de e-mail ou nome
+        // 2. Se não encontrar por e-mail exato, tenta por e-mail alternativo / prefixo de e-mail ou nome
         if (!$user) {
             $prefix = explode('@', $email)[0];
             $stmtPrefix = $db->prepare("SELECT * FROM utilizadores WHERE (LOWER(email) LIKE ? OR LOWER(nome) LIKE ?) LIMIT 1");
@@ -291,8 +310,8 @@ class Auth {
                 'nome' => 'Chefe de Departamento',
                 'user' => 'Chefe de Depto.',
                 'scope' => 'geral',
-                'nav' => ['cobertura', 'painel', 'turmas', 'curriculo', 'docentes'],
-                'desc' => 'Apreciação e Aprovação dos Planos de Cobertura Docente do Departamento'
+                'nav' => ['aprov', 'dashboard', 'painel', 'cobertura', 'turmas', 'curriculo', 'docentes', 'cv'],
+                'desc' => 'Apreciação, Parecer e Aprovação dos Planos de Cobertura Docente do Departamento'
             ],
             'gestor_academico' => [
                 'nome' => 'Gestão Académica',

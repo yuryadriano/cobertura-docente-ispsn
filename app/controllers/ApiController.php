@@ -273,8 +273,29 @@ class ApiController {
 
         $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
         $planoId = (int)($input['plano_id'] ?? 0);
+        $cursoId = (int)($input['curso_id'] ?? 0);
+        $anoLectivo = $input['ano_lectivo'] ?? get_ano_lectivo_activo();
         $novoEstado = $input['estado'] ?? '';
         $obs = $input['observacoes'] ?? null;
+
+        // Se veio curso_id ou se o planoId não existe diretamente em planos_cobertura
+        $db = Database::getInstance();
+        if ($planoId > 0) {
+            $stmtChk = $db->prepare("SELECT id FROM planos_cobertura WHERE id = ?");
+            $stmtChk->execute([$planoId]);
+            if (!$stmtChk->fetch()) {
+                // Tenta resolver como curso_id para o ano letivo ativo
+                $planoObj = $this->planoModel->getByCursoEAno($planoId, $anoLectivo);
+                if ($planoObj) {
+                    $planoId = (int)$planoObj['id'];
+                }
+            }
+        } elseif ($cursoId > 0) {
+            $planoObj = $this->planoModel->getByCursoEAno($cursoId, $anoLectivo);
+            if ($planoObj) {
+                $planoId = (int)$planoObj['id'];
+            }
+        }
 
         if (!$planoId || !in_array($novoEstado, ['Rascunho', 'Em Elaboração', 'Submetido', 'Aprovado pelo Departamento', 'Validado', 'Devolvido'])) {
             Response::error('Dados inválidos para alteração de estado.');

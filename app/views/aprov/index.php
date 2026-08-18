@@ -1,56 +1,195 @@
 <?php
 /**
- * View: Aprovações da Cobertura Docente (Presidente / Consulta)
+ * View: Painel de Aprovações da Cobertura Docente (ISPSN 2026/27)
+ * Suporte a fluxo RBAC em 2 Etapas: Chefe de Departamento & Presidência
  */
 $canApprove = Auth::canApprove();
+$currentUser = Auth::user();
+$userRole = $currentUser['perfil'] ?? 'coordenador';
+$userEmail = strtolower($currentUser['email'] ?? '');
+
+// Helper institucional para classificar cursos por Departamento no ISPSN
+function get_depto_curso(string $cursoNome): array {
+    $c = mb_strtolower($cursoNome);
+    if (strpos($c, 'enfermagem') !== false || strpos($c, 'análises') !== false || strpos($c, 'analises') !== false || strpos($c, 'fisioterapia') !== false || strpos($c, 'cardiopneumologia') !== false) {
+        return [
+            'id'     => 'saude',
+            'nome'   => 'Ciências da Saúde',
+            'chefe'  => 'Prof. Kianguembeni Canania',
+            'cor'    => '#0E7490',
+            'bg'     => '#E0F2FE',
+            'border' => '#BAE6FD'
+        ];
+    }
+    if (strpos($c, 'regime b') !== false || strpos($c, 'pedagógica') !== false || strpos($c, 'pedagogica') !== false) {
+        return [
+            'id'     => 'academicos',
+            'nome'   => 'Assuntos Académicos',
+            'chefe'  => 'Prof. Edmundo Francisco',
+            'cor'    => '#6B21A8',
+            'bg'     => '#F3E8FF',
+            'border' => '#E9D5FF'
+        ];
+    }
+    return [
+        'id'     => 'sociais',
+        'nome'   => 'Ciências Sociais e Humanas',
+        'chefe'  => 'Prof. Boaventura Fernando',
+        'cor'    => '#1D4ED8',
+        'bg'     => '#DBEAFE',
+        'border' => '#BFDBFE'
+    ];
+}
+
+// Determinar aba padrão com base no Chefe autenticado
+$defaultTab = 'all';
+if ($userRole === 'chefe_departamento') {
+    if (strpos($userEmail, 'boaventura') !== false) {
+        $defaultTab = 'sociais';
+    } elseif (strpos($userEmail, 'canania') !== false) {
+        $defaultTab = 'saude';
+    } elseif (strpos($userEmail, 'edmundo') !== false) {
+        $defaultTab = 'academicos';
+    }
+}
+
+// Contabilização de métricas por departamento
+$deptCounts = [
+    'all'        => ['total' => count($stats), 'pendentes' => 0, 'aprov_depto' => 0, 'validados' => 0],
+    'sociais'    => ['total' => 0, 'pendentes' => 0, 'aprov_depto' => 0, 'validados' => 0],
+    'saude'      => ['total' => 0, 'pendentes' => 0, 'aprov_depto' => 0, 'validados' => 0],
+    'academicos' => ['total' => 0, 'pendentes' => 0, 'aprov_depto' => 0, 'validados' => 0]
+];
+
+foreach ($stats as $s) {
+    $dep = get_depto_curso($s['curso_nome'] ?? '')['id'];
+    $st = $s['estado'] ?? 'Rascunho';
+    
+    if (isset($deptCounts[$dep])) {
+        $deptCounts[$dep]['total']++;
+        if (in_array($st, ['Submetido', 'Em Elaboração', 'Rascunho'])) {
+            $deptCounts[$dep]['pendentes']++;
+            $deptCounts['all']['pendentes']++;
+        } elseif ($st === 'Aprovado pelo Departamento') {
+            $deptCounts[$dep]['aprov_depto']++;
+            $deptCounts['all']['aprov_depto']++;
+        } elseif ($st === 'Validado' || $st === 'Aprovado') {
+            $deptCounts[$dep]['validados']++;
+            $deptCounts['all']['validados']++;
+        }
+    }
+}
 ?>
-<div style="margin-bottom: 20px;">
-    <h2 class="page">Painel de Aprovação de Planos de Cobertura</h2>
-    <div class="sub">Revisão, homologação e devolução de planos submetidos pelos Coordenadores de Curso</div>
+
+<div style="margin-bottom: 20px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+    <div>
+        <h2 class="page" style="margin:0 0 4px 0; display:flex; align-items:center; gap:10px;">
+            <span>🛡️</span> Painel de Aprovação de Planos de Cobertura
+            <span class="pill ok" style="font-size:12px; font-weight:700;">Ano Letivo <?= htmlspecialchars(get_ano_lectivo_activo()) ?></span>
+        </h2>
+        <div class="sub">Apreciação, homologação e devolução de planos submetidos pelos Coordenadores de Curso (Fluxo Departamental & Presidencial).</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <span style="font-size:12px; color:var(--mut); font-weight:600;">Perfil Ativo:</span>
+        <span class="pill" style="background:#1F4E79; color:#fff; font-weight:700; font-size:12px;"><?= htmlspecialchars(Auth::roleInfo($userRole)['nome']) ?></span>
+    </div>
 </div>
 
+<!-- Abas de Filtro por Departamento -->
+<div style="display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; border-bottom:2px solid var(--line); padding-bottom:12px;">
+    <button class="dept-tab-btn <?= $defaultTab === 'all' ? 'active' : '' ?>" onclick="window.filtrarDepartamento('all', this)" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s ease; border:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px;">
+        <span>🏢 Todos os Cursos</span>
+        <span class="pill" style="font-size:11px; padding:2px 8px;"><?= $deptCounts['all']['total'] ?></span>
+    </button>
+    <button class="dept-tab-btn <?= $defaultTab === 'sociais' ? 'active' : '' ?>" onclick="window.filtrarDepartamento('sociais', this)" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s ease; border:1px solid #BFDBFE; background:#EFF6FF; color:#1D4ED8; display:flex; align-items:center; gap:8px;">
+        <span>⚖️ Ciências Sociais e Humanas</span>
+        <span class="pill" style="background:#DBEAFE; color:#1D4ED8; font-size:11px; padding:2px 8px;"><?= $deptCounts['sociais']['total'] ?></span>
+    </button>
+    <button class="dept-tab-btn <?= $defaultTab === 'saude' ? 'active' : '' ?>" onclick="window.filtrarDepartamento('saude', this)" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s ease; border:1px solid #BAE6FD; background:#F0F9FF; color:#0E7490; display:flex; align-items:center; gap:8px;">
+        <span>🩺 Ciências da Saúde</span>
+        <span class="pill" style="background:#E0F2FE; color:#0E7490; font-size:11px; padding:2px 8px;"><?= $deptCounts['saude']['total'] ?></span>
+    </button>
+    <button class="dept-tab-btn <?= $defaultTab === 'academicos' ? 'active' : '' ?>" onclick="window.filtrarDepartamento('academicos', this)" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s ease; border:1px solid #E9D5FF; background:#FAF5FF; color:#6B21A8; display:flex; align-items:center; gap:8px;">
+        <span>🎓 Assuntos Académicos</span>
+        <span class="pill" style="background:#F3E8FF; color:#6B21A8; font-size:11px; padding:2px 8px;"><?= $deptCounts['academicos']['total'] ?></span>
+    </button>
+</div>
 
-<div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px;">
+<style>
+.dept-tab-btn.active {
+    box-shadow: 0 0 0 2px var(--blue), 0 4px 12px rgba(31,78,121,0.15) !important;
+    background: #1F4E79 !important;
+    color: #fff !important;
+    border-color: #1F4E79 !important;
+}
+.dept-tab-btn.active .pill {
+    background: rgba(255,255,255,0.25) !important;
+    color: #fff !important;
+}
+</style>
+
+<!-- Tabela de Planos e Ações -->
+<div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
     <div class="tbl-wrap">
-        <table class="tbl">
+        <table class="tbl" id="tabela-aprovacoes">
             <thead>
                 <tr>
-                    <th>Curso</th>
+                    <th style="min-width:200px;">Curso</th>
+                    <th>Departamento Responsável</th>
                     <th>Estado Atual</th>
                     <th>Submetido em</th>
                     <th>Total UCs</th>
                     <th>Conformidade</th>
-                    <th>Ações de Aprovação</th>
+                    <th style="min-width:260px; text-align:right;">Ações de Aprovação</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($stats as $s): ?>
-                <tr>
-                    <td><strong><?= htmlspecialchars($s['curso_nome']) ?></strong></td>
+                <?php 
+                    $depInfo = get_depto_curso($s['curso_nome'] ?? '');
+                    $st = $s['estado'] ?? 'Rascunho';
+                    $bClass = ($st === 'Validado' || $st === 'Aprovado') ? 'b-sim' : (in_array($st, ['Submetido', 'Aprovado pelo Departamento']) ? 'b-ni' : 'b-nao');
+                    $planoId = !empty($s['plano_id']) ? (int)$s['plano_id'] : 0;
+                    $cursoId = (int)$s['curso_id'];
+                ?>
+                <tr class="linha-curso-aprov" data-dept="<?= $depInfo['id'] ?>">
                     <td>
-                        <?php 
-                            $st = $s['estado'] ?? 'Rascunho';
-                            $bClass = ($st === 'Validado' || $st === 'Aprovado') ? 'b-sim' : (in_array($st, ['Submetido', 'Aprovado pelo Departamento']) ? 'b-ni' : 'b-nao');
-                        ?>
+                        <strong style="color:var(--blue); font-size:13.5px;"><?= htmlspecialchars($s['curso_nome']) ?></strong>
+                        <div style="font-size:11px; color:var(--mut); margin-top:2px;">ID Curso: #<?= $cursoId ?> <?= $planoId ? "· Plano #{$planoId}" : "" ?></div>
+                    </td>
+                    <td>
+                        <span style="display:inline-block; font-size:11.5px; font-weight:700; color:<?= $depInfo['cor'] ?>; background:<?= $depInfo['bg'] ?>; border:1px solid <?= $depInfo['border'] ?>; padding:3px 10px; border-radius:6px;">
+                            <?= htmlspecialchars($depInfo['nome']) ?>
+                        </span>
+                        <div style="font-size:10.5px; color:var(--mut); margin-top:2px;"><?= htmlspecialchars($depInfo['chefe']) ?></div>
+                    </td>
+                    <td>
                         <span class="b <?= $bClass ?>"><?= htmlspecialchars($st) ?></span>
                     </td>
-                    <td><?= date('d/m/Y') ?></td>
-                    <td><?= $s['total_uc'] ?></td>
-                    <td><span style="color:var(--ok); font-weight:700;"><?= $s['conf_sim'] ?> conformes</span></td>
+                    <td><?= !empty($s['data_submissao']) ? date('d/m/Y H:i', strtotime($s['data_submissao'])) : '<span style="color:var(--mut);">—</span>' ?></td>
+                    <td><strong><?= (int)$s['total_uc'] ?></strong> <span style="font-size:11px; color:var(--mut);">UCs</span></td>
                     <td>
-                        <button onclick="window.verHistoricoAprovacao(<?= $s['curso_id'] ?>)" class="btn sm ghost" style="color:#8e44ad; border-color:#8e44ad;" title="Ver Linha do Tempo de Auditoria">📜 Histórico</button>
-                        <a href="index.php?page=relatorio_plano&curso_id=<?= $s['curso_id'] ?>&ano_lectivo=<?= urlencode(get_ano_lectivo_activo()) ?>" target="_blank" class="btn sm ghost" style="color:var(--blue); border-color:var(--blue);" title="Imprimir / PDF Oficial">📄 PDF</a>
-                        <a href="index.php?api=exportar_excel&curso_id=<?= $s['curso_id'] ?>&ano_lectivo=<?= urlencode(get_ano_lectivo_activo()) ?>" class="btn sm ghost" style="color:#1E8449; border-color:#1E8449;" title="Descarregar Excel">📊 Excel</a>
-                        
-                        <?php if (Auth::hasRole(['presidente', 'admin'])): ?>
-                            <?php if ($st !== 'Validado'): ?>
-                                <button class="btn sm btn-ok" style="background:#1F4E79;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Validado')">🛡️ Validar (Presidência)</button>
-                            <?php endif; ?>
-                            <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">↩️ Devolver / Reabrir</button>
-                        <?php elseif (Auth::hasRole(['chefe_departamento']) && in_array($st, ['Submetido', 'Em Elaboração', 'Rascunho'])): ?>
-                            <button class="btn sm btn-ok" style="background:#1E8449;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Aprovado pelo Departamento')">✅ Aprovar pelo Depto</button>
-                            <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $s['curso_id'] ?>, 'Devolvido')">↩️ Devolver</button>
+                        <span style="color:var(--ok); font-weight:700;"><?= (int)$s['conf_sim'] ?> conformes</span>
+                        <?php if ((int)$s['conf_nao'] > 0): ?>
+                            <span style="color:var(--bad); font-size:11px; display:block;"><?= (int)$s['conf_nao'] ?> não conformes</span>
                         <?php endif; ?>
+                    </td>
+                    <td style="text-align:right;">
+                        <div style="display:inline-flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
+                            <button onclick="window.verHistoricoAprovacao(<?= $cursoId ?>)" class="btn sm ghost" style="color:#8e44ad; border-color:#8e44ad;" title="Ver Linha do Tempo de Auditoria">📜 Histórico</button>
+                            <a href="index.php?page=relatorio_plano&curso_id=<?= $cursoId ?>&ano_lectivo=<?= urlencode(get_ano_lectivo_activo()) ?>" target="_blank" class="btn sm ghost" style="color:var(--blue); border-color:var(--blue);" title="Imprimir / PDF Oficial">📄 PDF</a>
+                            <a href="index.php?api=exportar_excel&curso_id=<?= $cursoId ?>&ano_lectivo=<?= urlencode(get_ano_lectivo_activo()) ?>" class="btn sm ghost" style="color:#1E8449; border-color:#1E8449;" title="Descarregar Excel">📊 Excel</a>
+                            
+                            <?php if (Auth::hasRole(['presidente', 'admin'])): ?>
+                                <?php if ($st !== 'Validado'): ?>
+                                    <button class="btn sm btn-ok" style="background:#1F4E79; color:#fff;" onclick="window.aprovarCurso(<?= $cursoId ?>, 'Validado', <?= $planoId ?>)">🛡️ Validar (Presidência)</button>
+                                <?php endif; ?>
+                                <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $cursoId ?>, 'Devolvido', <?= $planoId ?>)">↩️ Devolver</button>
+                            <?php elseif (Auth::hasRole(['chefe_departamento']) && in_array($st, ['Submetido', 'Em Elaboração', 'Rascunho'])): ?>
+                                <button class="btn sm btn-ok" style="background:#1E8449; color:#fff;" onclick="window.aprovarCurso(<?= $cursoId ?>, 'Aprovado pelo Departamento', <?= $planoId ?>)">✅ Aprovar (Depto)</button>
+                                <button class="btn sm" style="background:var(--bad); color:#fff;" onclick="window.aprovarCurso(<?= $cursoId ?>, 'Devolvido', <?= $planoId ?>)">↩️ Devolver</button>
+                            <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -78,65 +217,59 @@ $canApprove = Auth::canApprove();
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const res = await fetch('index.php?api=diagnostico_risco');
-        const data = await res.json();
-        const container = document.getElementById('container-diagnostico-riscos');
-        const badge = document.getElementById('badge-total-riscos');
+window.filtrarDepartamento = function(deptId, btnElement) {
+    document.querySelectorAll('.dept-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btnElement) {
+        btnElement.classList.add('active');
+    }
 
-        if (data.success && data.data.length > 0) {
-            badge.textContent = `${data.data.length} alertas identificados`;
-            badge.className = 'pill bad';
-
-            // Mostrar top 10 maiores riscos
-            const topRiscos = data.data.slice(0, 10);
-            container.innerHTML = `
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr style="background:#faf9f5; text-align:left;">
-                            <th style="padding:6px;">Disciplina / Turma</th>
-                            <th style="padding:6px;">Docente Atribuído</th>
-                            <th style="padding:6px;">Alerta de Risco</th>
-                            <th style="padding:6px; text-align:center;">Gravidade</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${topRiscos.map(r => `
-                            <tr style="border-bottom:1px solid var(--line);">
-                                <td style="padding:6px;"><b>${r.disciplina_nome}</b> <span style="color:var(--mut); font-size:11px;">(${r.turma_nome || 'Geral'})</span></td>
-                                <td style="padding:6px;">${r.docente_nome || '<span style="color:var(--bad); font-weight:700;">Sem Docente</span>'}</td>
-                                <td style="padding:6px;"><span class="pill ${r.gravidade_risco >= 3 ? 'bad' : 'warn'}">${r.nivel_risco}</span></td>
-                                <td style="padding:6px; text-align:center; font-weight:700; color:${r.gravidade_risco >= 3 ? 'var(--bad)' : 'var(--warn)'};">Nível ${r.gravidade_risco}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+    const rows = document.querySelectorAll('.linha-curso-aprov');
+    rows.forEach(row => {
+        if (deptId === 'all' || row.dataset.dept === deptId) {
+            row.style.display = '';
         } else {
-            badge.textContent = '0 riscos pendentes';
-            badge.className = 'pill ok';
-            container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--ok); font-weight:600;">Nenhum risco elevado identificado nos planos ativos!</div>`;
+            row.style.display = 'none';
         }
-    } catch (e) {
-        console.error('Erro ao carregar riscos:', e);
+    });
+};
+
+// Executar filtro padrão ao carregar a página
+document.addEventListener('DOMContentLoaded', () => {
+    const defaultDept = '<?= $defaultTab ?>';
+    if (defaultDept !== 'all') {
+        const btn = document.querySelector(`.dept-tab-btn[onclick*="${defaultDept}"]`);
+        if (btn) window.filtrarDepartamento(defaultDept, btn);
     }
 });
 
-window.aprovarCurso = async (cursoId, estado) => {
-    const obs = prompt(`Insira o parecer/comentário para alterar o estado do curso para ${estado}:`);
+window.aprovarCurso = async (cursoId, estado, planoId = 0) => {
+    const promptMsg = estado === 'Aprovado pelo Departamento' 
+        ? 'Insira o parecer/comentário para homologação do plano pelo Chefe de Departamento:'
+        : (estado === 'Devolvido' ? 'Insira o motivo detalhado para a devolução do plano ao Coordenador:' : `Insira o parecer para alterar o plano para "${estado}":`);
+        
+    const obs = prompt(promptMsg);
     if (obs !== null) {
-        const res = await fetch('index.php?api=plano_estado', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ plano_id: cursoId, estado: estado, observacoes: obs })
-        });
-        const data = await res.json();
-        if (data.success) {
-            alert(data.message || 'Estado alterado com sucesso!');
-            location.reload();
-        } else {
-            alert('Erro: ' + (data.error || data.message || 'Falha ao alterar estado do curso.'));
+        try {
+            const res = await fetch('index.php?api=plano_estado', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    curso_id: cursoId, 
+                    plano_id: planoId, 
+                    estado: estado, 
+                    observacoes: obs,
+                    ano_lectivo: '2026/27'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message || 'Estado alterado com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro: ' + (data.error || data.message || 'Falha ao alterar estado do curso.'));
+            }
+        } catch (e) {
+            alert('Erro de comunicação com o servidor: ' + e.message);
         }
     }
 };
@@ -157,8 +290,8 @@ window.verHistoricoAprovacao = async (cursoId) => {
             body.innerHTML = `
                 <div style="position:relative; padding-left:20px; border-left:2px solid var(--line); margin-top:10px;">
                     ${data.data.map(h => {
-                        const icon = h.acao === 'Aprovado' ? '✅' : (h.acao === 'Devolvido' ? '↩️' : '📤');
-                        const badgeColor = h.acao === 'Aprovado' ? 'b-sim' : (h.acao === 'Devolvido' ? 'b-nao' : 'b-ni');
+                        const icon = (h.acao === 'Aprovado' || h.acao === 'Validado' || h.acao === 'Aprovado pelo Departamento') ? '✅' : (h.acao === 'Devolvido' ? '↩️' : '📤');
+                        const badgeColor = (h.acao === 'Aprovado' || h.acao === 'Validado') ? 'b-sim' : (h.acao === 'Devolvido' ? 'b-nao' : 'b-ni');
                         const dateStr = new Date(h.created_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                         return `
                             <div style="margin-bottom:20px; position:relative;">
@@ -190,4 +323,3 @@ window.verHistoricoAprovacao = async (cursoId) => {
     }
 };
 </script>
-

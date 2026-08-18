@@ -60,12 +60,13 @@ if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASSWORD') !== false ? get
 
 // Perfis de Acesso do Sistema (RBAC)
 define('PERFIS_ACESSO', [
-    'coordenador'      => 'Coordenador de Curso',
-    'gestor_academico' => 'Gestão Académica',
-    'grh'              => 'Recursos Humanos (GRH)',
-    'presidente'       => 'Presidente / Direção',
-    'secretario_geral' => 'Secretário-Geral',
-    'admin'            => 'Administrador do Sistema'
+    'coordenador'        => 'Coordenador de Curso',
+    'chefe_departamento' => 'Chefe de Departamento',
+    'gestor_academico'   => 'Gestão Académica',
+    'grh'                => 'Recursos Humanos (GRH)',
+    'presidente'         => 'Presidente / Direção',
+    'secretario_geral'   => 'Secretário-Geral',
+    'admin'              => 'Administrador do Sistema'
 ]);
 
 // Configurações do Servidor SMTP Institucional ISPSN (E-mail Autenticado)

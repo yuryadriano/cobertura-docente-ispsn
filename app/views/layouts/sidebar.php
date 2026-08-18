@@ -43,7 +43,18 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         <div style="font-size:10px; color:var(--mut); text-transform:uppercase;">Âmbito de Acesso</div>
         <?php
         $scopeDisplay = 'Todos os Cursos';
-        if ($info['scope'] === 'curso' && !empty($currentUser['curso_id'])) {
+        if ($currentUser['perfil'] === 'chefe_departamento') {
+            $emailScope = strtolower($currentUser['email'] ?? '');
+            if (strpos($emailScope, 'boaventura') !== false) {
+                $scopeDisplay = 'Depto. Ciências Sociais e Humanas';
+            } elseif (strpos($emailScope, 'canania') !== false) {
+                $scopeDisplay = 'Depto. Ciências da Saúde';
+            } elseif (strpos($emailScope, 'edmundo') !== false) {
+                $scopeDisplay = 'Depto. Assuntos Académicos';
+            } else {
+                $scopeDisplay = 'Chefia de Departamento';
+            }
+        } elseif ($info['scope'] === 'curso' && !empty($currentUser['curso_id'])) {
             $dbScope = Database::getInstance();
             $stmtScope = $dbScope->prepare("SELECT nome FROM cursos WHERE id = ? LIMIT 1");
             $stmtScope->execute([$currentUser['curso_id']]);
@@ -53,7 +64,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
             }
         }
         ?>
-        <div><?= htmlspecialchars($scopeDisplay) ?></div>
+        <div style="font-weight:700; color:var(--blue); font-size:12px;"><?= htmlspecialchars($scopeDisplay) ?></div>
       </div>
     </div>
     
