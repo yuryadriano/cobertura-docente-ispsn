@@ -182,6 +182,87 @@ class DocenteModel {
     }
 
     /**
+     * Elimina um docente do catálogo institucional, removendo ficheiros físicos e desvinculando atribuições
+     */
+    public function deleteDocente(int $id): array {
+        // 1. Verificar se o docente existe
+        $doc = $this->getById($id);
+        if (!$doc) {
+            return ['success' => false, 'message' => 'Docente não encontrado no catálogo.'];
+        }
+
+        // 2. Contar atribuições em turmas e planos de cobertura
+        $stmtLinhas = $this->db->prepare("
+            SELECT lc.id, lc.plano_id, d.nome AS disc_nome, c.nome AS curso_nome 
+            FROM linhas_cobertura lc
+            JOIN disciplinas d ON lc.disciplina_id = d.id
+            JOIN cursos c ON d.curso_id = c.id
+            WHERE lc.docente_id = ?
+        ");
+        $stmtLinhas->execute([$id]);
+        $linhasAfetadas = $stmtLinhas->fetchAll();
+
+        $stmtTurmas = $this->db->prepare("SELECT id, designacao FROM turmas WHERE docente_id = ?");
+        $stmtTurmas->execute([$id]);
+        $turmasAfetadas = $stmtTurmas->fetchAll();
+
+        // 3. Remover ficheiros físicos associados ao docente
+        $docs = $this->getDocumentos($id);
+        foreach ($docs as $d) {
+            $this->deleteDocumento((int)$d['id']);
+        }
+
+        // Remover foto de CV se existir
+        $cv = $this->getCVByDocenteId($id);
+        if ($cv && !empty($cv['foto_caminho'])) {
+            $fotoPath = $cv['foto_caminho'];
+            $possibleFotoPaths = [
+                __DIR__ . '/../../public/' . ltrim($fotoPath, '/'),
+                __DIR__ . '/../../' . ltrim($fotoPath, '/'),
+                __DIR__ . '/../../public/uploads/cv_fotos/' . basename($fotoPath)
+            ];
+            foreach ($possibleFotoPaths as $fp) {
+                if (file_exists($fp) && !is_dir($fp)) {
+                    @unlink($fp);
+                    break;
+                }
+            }
+        }
+
+        // 4. Limpar atribuições e atualizar conformidade
+        if (!empty($linhasAfetadas)) {
+            $stmtUpdateLinha = $this->db->prepare("UPDATE linhas_cobertura SET docente_id = NULL, conformidade = 'Não' WHERE docente_id = ?");
+            $stmtUpdateLinha->execute([$id]);
+        }
+
+        if (!empty($turmasAfetadas)) {
+            $stmtUpdateTurma = $this->db->prepare("UPDATE turmas SET docente_id = NULL WHERE docente_id = ?");
+            $stmtUpdateTurma->execute([$id]);
+        }
+
+        // 5. Excluir da tabela de docentes
+        $stmtDel = $this->db->prepare("DELETE FROM docentes WHERE id = ?");
+        $res = $stmtDel->execute([$id]);
+
+        if ($res) {
+            $msg = "Docente '{$doc['nome']}' eliminado com sucesso do catálogo institucional.";
+            if (count($linhasAfetadas) > 0 || count($turmasAfetadas) > 0) {
+                $msg .= " Foram desvinculadas " . count($linhasAfetadas) . " disciplina(s) e " . count($turmasAfetadas) . " turma(s).";
+            }
+            return [
+                'success' => true,
+                'message' => $msg,
+                'desvinculacoes' => [
+                    'linhas' => count($linhasAfetadas),
+                    'turmas' => count($turmasAfetadas)
+                ]
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Falha ao eliminar docente da base de dados.'];
+    }
+
+    /**
      * Propaga o recálculo automático de conformidade em todas as linhas de planos onde o docente está atribuído
      */
     public function recalcularConformidadeDocenteEmTodosPlanos(int $docenteId): int {
@@ -570,9 +651,9 @@ class DocenteModel {
                 SUM(CASE WHEN tem_agregacao_pedag = 'Não' OR tem_agregacao_pedag IS NULL THEN 1 ELSE 0 END) as `capacitação_nao`,
                 0 as `capacitação_ni`,
 
-                SUM(CASE WHEN categoria_carreira = 'Sim' THEN 1 ELSE 0 END) as carreira_sim,
-                SUM(CASE WHEN categoria_carreira = 'Não' THEN 1 ELSE 0 END) as carreira_nao,
-                SUM(CASE WHEN categoria_carreira = 'Não registado' OR categoria_carreira IS NULL THEN 1 ELSE 0 END) as carreira_ni
+                SUM(CASE WHEN categoria_carreira NOT IN ('Não está na CEDS', 'Não', 'Colaborador', 'Não registado', '') AND categoria_carreira IS NOT NULL THEN 1 ELSE 0 END) as carreira_sim,
+                SUM(CASE WHEN categoria_carreira IN ('Não está na CEDS', 'Não', 'Colaborador') THEN 1 ELSE 0 END) as carreira_nao,
+                SUM(CASE WHEN categoria_carreira = 'Não registado' OR categoria_carreira IS NULL OR categoria_carreira = '' THEN 1 ELSE 0 END) as carreira_ni
             FROM docentes
             WHERE activo = 1
         ");

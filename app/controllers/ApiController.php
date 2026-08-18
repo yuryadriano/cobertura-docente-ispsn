@@ -56,6 +56,9 @@ class ApiController {
             case 'docente_salvar':
                 $this->salvarDocente();
                 break;
+            case 'docente_eliminar':
+                $this->eliminarDocente();
+                break;
             case 'stats':
                 $this->getStats();
                 break;
@@ -384,6 +387,34 @@ class ApiController {
             Response::success('Perfil do docente atualizado com sucesso.');
         } else {
             Response::error('Falha ao atualizar perfil do docente.');
+        }
+    }
+
+    private function eliminarDocente(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Response::error('Método HTTP inválido.', 405);
+        }
+
+        if (!Auth::check()) {
+            Response::error('Sessão não iniciada. Por favor efetue login.', 401);
+        }
+
+        if (!Auth::canEditDoc()) {
+            Response::error('Apenas o perfil GRH ou Administração tem autorização para eliminar docentes.', 403);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        $docenteId = (int)($input['id'] ?? $input['docente_id'] ?? 0);
+
+        if (!$docenteId) {
+            Response::error('ID do docente é obrigatório.');
+        }
+
+        $res = $this->docenteModel->deleteDocente($docenteId);
+        if ($res['success']) {
+            Response::success($res['message'], ['desvinculacoes' => $res['desvinculacoes'] ?? null]);
+        } else {
+            Response::error($res['message'] ?? 'Falha ao eliminar docente.');
         }
     }
 

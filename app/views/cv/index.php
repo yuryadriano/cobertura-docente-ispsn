@@ -126,8 +126,9 @@ $preDocId = (int)($_GET['docente_id'] ?? 0);
                     </select>
                 </div>
                 <div>
-                    <label class="cv-label">Categoria na Carreira Docente <span class="badge-plano">↳ plano</span></label>
+                    <label class="cv-label">Categoria na Carreira Docente (CEDS) <span class="badge-plano">↳ plano</span></label>
                     <select id="cv-categoria" class="cv-input">
+                        <option value="Não está na CEDS">Não está na CEDS</option>
                         <option value="Assistente">Assistente</option>
                         <option value="Assistente do 1.º Escalão">Assistente do 1.º Escalão</option>
                         <option value="Professor Auxiliar">Professor Auxiliar</option>

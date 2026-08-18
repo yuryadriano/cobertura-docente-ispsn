@@ -64,14 +64,16 @@ $currentUserRole = $_SESSION['user']['perfil'] ?? 'coordenador';
                     </select>
                 </div>
                 <div style="grid-column: span 2;">
-                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Categoria da Carreira Docente *</label>
+                    <label style="font-weight:700; font-size:12px; color:var(--navy);">Categoria da Carreira Docente (CEDS) *</label>
                     <select id="nd-categoria" required class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--line); font-weight:600;">
-                        <option value="Assistente">Assistente</option>
-                        <option value="Auxiliar">Professor Auxiliar</option>
-                        <option value="Associado">Professor Associado</option>
-                        <option value="Catedrático">Professor Catedrático</option>
+                        <option value="Não está na CEDS">Não está na CEDS</option>
+                        <option value="Assistente" selected>Assistente</option>
+                        <option value="Assistente do 1.º Escalão">Assistente do 1.º Escalão</option>
+                        <option value="Professor Auxiliar">Professor Auxiliar</option>
+                        <option value="Professor Associado">Professor Associado</option>
+                        <option value="Professor Catedrático">Professor Catedrático</option>
+                        <option value="Professor Convidado">Professor Convidado</option>
                         <option value="Colaborador">Colaborador</option>
-                        <option value="Convidado">Convidado</option>
                     </select>
                 </div>
             </div>
@@ -282,21 +284,31 @@ window.selectDocente = async (docenteInput, rowElement) => {
 
     const html = `
         <div class="card" style="background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden;">
-            <div class="hd" style="font-weight:700; padding:12px 18px; border-bottom:1px solid var(--line); background:#faf9f5; color:var(--blue); font-size:14px; display:flex; justify-content:space-between; align-items:center;">
-                <span>${name} · ficha documental</span>
-                <span class="pill ${badgeClass}">${loadedCount}/6 categorias com documentos</span>
+            <div class="hd" style="font-weight:700; padding:12px 18px; border-bottom:1px solid var(--line); background:#faf9f5; color:var(--blue); font-size:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span>${name} · ficha documental</span>
+                    <span class="pill ${badgeClass}">${loadedCount}/6 categorias com documentos</span>
+                </div>
+                <div>
+                    ${window.CAN_EDIT_DOC ? `
+                        <button onclick="window.eliminarDocente(${docenteId}, '${name.replace(/'/g, "\\'")}')" class="btn sm" style="background:#FBEAE8; color:#C0392B; border:1px solid #F5C6CB; font-weight:700; font-size:11.5px; padding:4px 10px; cursor:pointer;" title="Eliminar docente do catálogo acadêmico">
+                            🗑️ Eliminar Docente
+                        </button>
+                    ` : ''}
+                </div>
             </div>
             <div class="bd" style="padding:16px;">
                 <table style="margin-bottom:14px; width:100%; border-collapse:collapse;">
                     <tbody>
-                        <tr><td style="color:var(--mut); width:180px; padding:4px 0;">Grau académico</td><td><b>${d.grau_academico || 'Licenciado'}</b></td></tr>
+                        <tr><td style="color:var(--mut); width:200px; padding:4px 0;">Grau académico</td><td><b>${d.grau_academico || 'Licenciado'}</b></td></tr>
+                        <tr><td style="color:var(--mut); padding:4px 0;">Categoria na Carreira (CEDS)</td><td><span class="pill ${d.categoria_carreira === 'Não está na CEDS' ? 'mut' : 'ok'}"><b>${d.categoria_carreira || 'Não está na CEDS'}</b></span></td></tr>
                         <tr><td style="color:var(--mut); padding:4px 0;">Especialidade</td><td>${d.especialidade || 'Não identificada'}</td></tr>
                         <tr><td style="color:var(--mut); padding:4px 0;">INAAREES</td><td>${d.tem_inaarees || 'Não'}</td></tr>
                         <tr><td style="color:var(--mut); padding:4px 0;">Capacitação pedagógica</td><td>${d.tem_agregacao_pedag || 'Não'}</td></tr>
                     </tbody>
                 </table>
                 <div class="docgrid">${cardsHtml}</div>
-                <div style="margin-top:14px;">
+                <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
                     <a href="index.php?page=cv&docente_id=${d.id}" class="btn" style="text-decoration:none; display:inline-block;">Preencher CV estruturado →</a>
                 </div>
             </div>
@@ -304,6 +316,34 @@ window.selectDocente = async (docenteInput, rowElement) => {
     `;
 
     document.getElementById('detail-container').innerHTML = html;
+};
+
+window.eliminarDocente = async (docenteId, docenteNome) => {
+    if (!window.CAN_EDIT_DOC) {
+        alert('Apenas o perfil GRH ou Administração tem autorização para eliminar docentes.');
+        return;
+    }
+
+    const confirma = confirm(`⚠️ ATENÇÃO: Tem a certeza que deseja eliminar o(a) docente:\n\n"${docenteNome}" (ID #${docenteId})\n\nEsta ação irá remover permanentemente o docente, os seus documentos anexados, o CV estruturado e desvinculará quaisquer turmas ou disciplinas atribuídas.`);
+    if (!confirma) return;
+
+    try {
+        const res = await fetch('index.php?api=docente_eliminar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: docenteId })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            location.reload();
+        } else {
+            alert(`⚠️ Erro ao eliminar docente: ${data.error || data.message || 'Falha na operação.'}`);
+        }
+    } catch (err) {
+        alert('Erro de comunicação ao tentar eliminar docente: ' + err.message);
+    }
 };
 
 window.eliminarDoc = async (docId, docenteId) => {
