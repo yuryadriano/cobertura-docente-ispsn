@@ -166,6 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const rotuloFormatado = `${t.rotuloTurma} · ${t.turno} (${t.codOficial})`;
             return {
                 ...t,
+                rotuloCurto: t.rotuloTurma,
+                rotuloCompleto: rotuloFormatado,
                 rotuloFormatado: rotuloFormatado
             };
         });
@@ -221,19 +223,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateKPIsAndHeader() {
-        const turmaLinhas = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === selectedTurmaCod);
-        const total = turmaLinhas.length || linhasData.length;
-        const atrib = (turmaLinhas.length ? turmaLinhas : linhasData).filter(l => l.docente_id).length;
-        const conf  = (turmaLinhas.length ? turmaLinhas : linhasData).filter(l => l.conformidade === 'Sim').length;
+        const turmaLinhas = linhasData.filter(l => (l.turma_nome || '') === selectedTurmaCod);
+        const total = turmaLinhas.length;
+        const atrib = turmaLinhas.filter(l => l.docente_id).length;
+        const conf  = turmaLinhas.filter(l => l.conformidade === 'Sim').length;
         const pctConf = total ? Math.round((conf / total) * 100) : 0;
 
         const currentTurma = turmasData.find(t => t.cod === selectedTurmaCod) || turmasData[0];
 
         if (badgeTurmaInfo && currentTurma) {
-            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${currentTurma.rotuloCurto} (${currentTurma.turno}) · ${atrib}/${total} UCs`;
+            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${currentTurma.rotuloCurto || currentTurma.rotuloTurma} (${currentTurma.turno}) · ${atrib}/${total} UCs`;
         }
         if (cardTurmaHeader && currentTurma) {
-            cardTurmaHeader.textContent = `${currentTurma.ano}.º Ano — ${currentTurma.rotuloCompleto} — Disciplinas e Atribuições Docentes (${atrib}/${total} Atribuídas)`;
+            cardTurmaHeader.textContent = `${currentTurma.ano}.º Ano — ${currentTurma.rotuloCompleto || currentTurma.rotuloFormatado} — Disciplinas e Atribuições Docentes (${atrib}/${total} Atribuídas)`;
         }
 
         if (pillConfPct) {
@@ -332,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const turmaLinhas = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === selectedTurmaCod);
+        const turmaLinhas = linhasData.filter(l => (l.turma_nome || '') === selectedTurmaCod);
 
         if (!turmaLinhas || turmaLinhas.length === 0) {
             tbodyLinhas.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--mut);">Nenhuma disciplina encontrada para a turma ${selectedTurmaCod}.</td></tr>`;
