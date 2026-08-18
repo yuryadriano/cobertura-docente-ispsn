@@ -279,7 +279,18 @@ $pctConf = $totalUC ? round(($confSimCount / $totalUC) * 100) : 0;
         ?>
         <tr>
           <td style="text-align:center; font-weight:700; color:#666;"><?= $idx++ ?></td>
-          <td><strong><?= htmlspecialchars($l['turma_nome'] ?? 'TURMA-' . $l['ano_curricular'] . 'A') ?></strong></td>
+          <?php 
+            $turmaCod = $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A');
+            $turno = $l['turno'] ?? 'Manhã';
+            preg_match('/(?:[0-9]|RB[0-9]?)([A-Z])$/i', $turmaCod, $matches);
+            $letra = !empty($matches[1]) ? strtoupper($matches[1]) : '';
+            $labelLetra = $letra ? "Turma {$letra}" : "Turma Única";
+            $turnoTag = (strpos($turmaCod, 'RB') !== false) ? 'Regime B' : $turno;
+          ?>
+          <td>
+            <div style="font-weight:700; font-size:11px; color:#1F4E79;"><?= $labelLetra ?> (<?= htmlspecialchars($turnoTag) ?>)</div>
+            <div style="font-size:9.5px; color:#666; font-family:monospace;"><?= htmlspecialchars($turmaCod) ?></div>
+          </td>
           <td style="text-align:center;"><?= $l['ano_curricular'] ?>.º</td>
           <td style="text-align:center;"><?= htmlspecialchars($l['semestre']) ?></td>
           <td><strong><?= htmlspecialchars($l['disciplina_nome']) ?></strong></td>

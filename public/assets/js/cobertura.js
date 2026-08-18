@@ -131,6 +131,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function formatTurmaRotulo(cod, turno, ano) {
+        if (!cod) return 'Turma';
+        let letra = '';
+        const match = cod.match(/(?:[0-9]|RB[0-9]?)([A-Z])$/i);
+        if (match) {
+            letra = match[1].toUpperCase();
+        }
+        const turnoLabel = turno || 'Manhã';
+        const labelLetra = letra ? `Turma ${letra}` : `Turma Única`;
+        if (cod.includes('-RB') || cod.includes('RB')) {
+            return `${labelLetra} · Regime B (${cod})`;
+        }
+        return `${labelLetra} · ${turnoLabel} (${cod})`;
+    }
+
     function populateTurmaSelect() {
         if (!turmaSelect) return;
 
@@ -147,12 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         Object.keys(byAno).sort().forEach(ano => {
-            html += `<optgroup label="${ano}.º Ano">`;
+            const countTurmasAno = byAno[ano].length;
+            html += `<optgroup label="${ano}.º Ano (${countTurmasAno} ${countTurmasAno === 1 ? 'Turma' : 'Turmas'})">`;
             byAno[ano].forEach(t => {
                 const countTotal = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod).length;
                 const countAtrib = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod && l.docente_id).length;
-                const countInfo = countTotal > 0 ? ` (${countAtrib}/${countTotal} UCs)` : '';
-                html += `<option value="${t.cod}">${t.cod} · ${t.turno}${countInfo}</option>`;
+                const countInfo = countTotal > 0 ? ` [${countAtrib}/${countTotal} UCs]` : '';
+                const rotulo = formatTurmaRotulo(t.cod, t.turno, t.ano);
+                html += `<option value="${t.cod}">${rotulo}${countInfo}</option>`;
             });
             html += `</optgroup>`;
         });
@@ -183,10 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentTurma = turmasData.find(t => t.cod === selectedTurmaCod) || turmasData[0];
 
         if (badgeTurmaInfo && currentTurma) {
-            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${currentTurma.turno} (${atrib}/${total} UCs)`;
+            const rotulo = formatTurmaRotulo(currentTurma.cod, currentTurma.turno, currentTurma.ano);
+            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${rotulo} · ${atrib}/${total} UCs`;
         }
         if (cardTurmaHeader && currentTurma) {
-            cardTurmaHeader.textContent = `Turma ${currentTurma.cod} · ${currentTurma.ano}.º Ano · ${currentTurma.turno} — disciplinas e docentes (${atrib}/${total} atribuídas)`;
+            const rotulo = formatTurmaRotulo(currentTurma.cod, currentTurma.turno, currentTurma.ano);
+            cardTurmaHeader.textContent = `${currentTurma.ano}.º Ano — ${rotulo} — Disciplinas e Atribuições Docentes (${atrib}/${total} Atribuídas)`;
         }
 
         if (pillConfPct) {

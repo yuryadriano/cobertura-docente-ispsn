@@ -110,10 +110,46 @@ window.CURRENT_USER_CURSO_ID = <?= $userCursoId ? (int)$userCursoId : 'null' ?>;
 .pct-good { background: #E8F5E9; color: #1B5E20; }
 .pct-warn { background: #FEF3C7; color: #78350F; }
 .pct-bad  { background: #FBEAE8; color: #C0392B; }
+
+.badge-turno {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.turno-manha { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+.turno-tarde { background: #FFEDD5; color: #9A3412; border: 1px solid #FED7AA; }
+.turno-noite { background: #E0E7FF; color: #3730A3; border: 1px solid #C7D2FE; }
+.turno-regimeb { background: #F3E8FF; color: #6B21A8; border: 1px solid #E9D5FF; }
 </style>
 
 <script>
 window.TODAS_TURMAS = [];
+
+window.formatTurmaRotulo = (t) => {
+    const cod = t.designacao || '';
+    const turno = t.turno || 'Manhã';
+    let letra = '';
+    const match = cod.match(/(?:[0-9]|RB[0-9]?)([A-Z])$/i);
+    if (match) {
+        letra = match[1].toUpperCase();
+    }
+    const labelLetra = letra ? `Turma ${letra}` : `Turma Única`;
+    
+    if (cod.includes('-RB') || cod.includes('RB')) {
+        return { nome: labelLetra, tag: 'Regime B', icon: '🟣', badgeClass: 'turno-regimeb' };
+    }
+    if (turno === 'Tarde' || cod.includes('1T') || cod.includes('2T') || cod.includes('3T')) {
+        return { nome: labelLetra, tag: 'Tarde', icon: '🟠', badgeClass: 'turno-tarde' };
+    }
+    if (turno === 'Noite' || cod.includes('NT')) {
+        return { nome: labelLetra, tag: 'Noite', icon: '🔵', badgeClass: 'turno-noite' };
+    }
+    return { nome: labelLetra, tag: 'Manhã', icon: '🟡', badgeClass: 'turno-manha' };
+};
 
 window.carregarTurmas = async (cursoId) => {
     const tbody = document.getElementById('tbody-turmas');
@@ -200,12 +236,18 @@ window.renderizarTurmas = (anoFiltro) => {
         const notasNao = t.notas_no_prazo === 'Não' ? 'selected' : '';
 
         const docNome = t.docente_nome ? `<b>${t.docente_nome}</b>` : `<span style="color:var(--mut); font-style:italic;">Não atribuído</span>`;
+        const rotulo = window.formatTurmaRotulo(t);
 
         html += `
             <tr style="border-bottom:1px solid var(--line); ${!podeEditar ? 'opacity:0.85;' : ''}">
                 <td style="padding:10px 12px;">
-                    <div style="font-weight:700; color:var(--blue);">${t.designacao}</div>
-                    <div style="font-size:10.5px; color:var(--mut);">${t.ano_curricular}.º Ano · Semestre ${t.semestre}</div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+                        <span style="font-weight:800; font-size:13px; color:var(--blue);">${rotulo.nome}</span>
+                        <span class="badge-turno ${rotulo.badgeClass}">${rotulo.icon} ${rotulo.tag}</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--mut); font-weight:600;">
+                        ${t.ano_curricular}.º Ano · <code style="font-size:10.5px; background:#f0eeea; padding:1px 5px; border-radius:4px; font-weight:700; color:#333;">${t.designacao}</code> · Semestre ${t.semestre}
+                    </div>
                 </td>
                 <td style="padding:10px 12px;"><b>${t.disciplina_nome}</b></td>
                 <td style="padding:10px 12px;">${docNome}</td>
