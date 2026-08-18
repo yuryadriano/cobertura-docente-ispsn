@@ -61,11 +61,14 @@ class PlanoModel {
 
             $cursoId = (int)$plano['curso_id'];
 
-            // Obter código/prefixo do curso
+            // Obter dados do curso
             $stmtCurso = $this->db->prepare("SELECT id, codigo, nome FROM cursos WHERE id = ?");
             $stmtCurso->execute([$cursoId]);
             $curso = $stmtCurso->fetch();
-            $codCurso = strtoupper(!empty($curso['codigo']) ? trim($curso['codigo']) : substr(preg_replace('/[^A-Za-z]/', '', $curso['nome'] ?? 'CUR'), 0, 4));
+            if (!$curso) return;
+
+            $codCursoRaw = strtoupper(trim($curso['codigo'] ?? ''));
+            $nomeCurso = $curso['nome'] ?? '';
 
             // 1. Obter todas as disciplinas ativas deste curso
             $stmtDiscs = $this->db->prepare("SELECT * FROM disciplinas WHERE curso_id = ? AND activo = 1 ORDER BY ano_curricular ASC, semestre ASC, nome ASC");
@@ -73,77 +76,319 @@ class PlanoModel {
             $discs = $stmtDiscs->fetchAll();
             if (empty($discs)) return;
 
-            // Mapeamento de designações padrão existentes por ano para consistência
-            $stmtExistingTurmas = $this->db->prepare("
-                SELECT d.ano_curricular, t.designacao, t.turno 
-                FROM turmas t 
-                JOIN disciplinas d ON t.disciplina_id = d.id 
-                WHERE d.curso_id = ? AND t.designacao IS NOT NULL AND t.designacao != ''
-                ORDER BY t.id ASC
-            ");
-            $stmtExistingTurmas->execute([$cursoId]);
-            $existingTurmaRows = $stmtExistingTurmas->fetchAll();
-            $defaultDesignacaoByAno = [];
-            foreach ($existingTurmaRows as $r) {
-                $anoCur = (int)$r['ano_curricular'];
-                if (!isset($defaultDesignacaoByAno[$anoCur])) {
-                    $defaultDesignacaoByAno[$anoCur] = [
-                        'designacao' => $r['designacao'],
-                        'turno'      => $r['turno'] ?: 'Manhã'
-                    ];
+            $discsByAno = [];
+            foreach ($discs as $d) {
+                $discsByAno[(int)$d['ano_curricular']][] = $d;
+            }
+
+            // Matriz Institucional Oficial do ISPSN 2026/27 (207 Turmas)
+            $cronogramaTurmas = [
+                'CPRI' => [
+                    1 => [
+                        ['cod' => 'CPRI1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'CPRI1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'CPRI1NTA', 'turno' => 'Noite'],
+                        ['cod' => 'CPRI-RB-MA', 'turno' => 'Regime B'],
+                        ['cod' => 'CPRI-RB-TA', 'turno' => 'Regime B'],
+                    ],
+                    2 => [['cod' => 'CPRI2TA', 'turno' => 'Tarde']],
+                    3 => [['cod' => 'CPRI3NTA', 'turno' => 'Noite']],
+                    4 => [['cod' => 'CPRI4NTA', 'turno' => 'Noite']]
+                ],
+                'SOCI' => [
+                    1 => [
+                        ['cod' => 'SOC1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'SOC1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'SOC1NTA', 'turno' => 'Noite'],
+                        ['cod' => 'SOC-RB-MA', 'turno' => 'Regime B'],
+                        ['cod' => 'SOC-RB-TA', 'turno' => 'Regime B'],
+                    ],
+                    2 => [['cod' => 'SOC2TA', 'turno' => 'Tarde']],
+                    3 => [['cod' => 'SOC3NTA', 'turno' => 'Noite']],
+                    4 => [['cod' => 'SOC4NTA', 'turno' => 'Noite']]
+                ],
+                'CONT' => [
+                    1 => [
+                        ['cod' => 'COF1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'COF1MB', 'turno' => 'Manhã'],
+                        ['cod' => 'COF1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'COF1NTA', 'turno' => 'Noite'],
+                    ],
+                    2 => [
+                        ['cod' => 'COF2MA', 'turno' => 'Manhã'],
+                        ['cod' => 'COF2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'COF2NTA', 'turno' => 'Noite'],
+                    ],
+                    3 => [['cod' => 'COF3NTA', 'turno' => 'Noite']],
+                    4 => [['cod' => 'COF4NTA', 'turno' => 'Noite']]
+                ],
+                'ECON' => [
+                    1 => [
+                        ['cod' => 'ECO1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'ECO1MB', 'turno' => 'Manhã'],
+                        ['cod' => 'ECO1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'ECO1NTA', 'turno' => 'Noite'],
+                    ],
+                    2 => [
+                        ['cod' => 'ECO2MA', 'turno' => 'Manhã'],
+                        ['cod' => 'ECO2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'ECO2NTA', 'turno' => 'Noite'],
+                    ],
+                    3 => [['cod' => 'ECO3NTA', 'turno' => 'Noite']],
+                    4 => [['cod' => 'ECO4NTA', 'turno' => 'Noite']]
+                ],
+                'GRH' => [
+                    1 => [
+                        ['cod' => 'GRH1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'GRH1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'GRH1TB', 'turno' => 'Tarde'],
+                        ['cod' => 'GRH1NTA', 'turno' => 'Noite'],
+                        ['cod' => 'GRH1NTB', 'turno' => 'Noite'],
+                        ['cod' => 'GRH-RB1', 'turno' => 'Regime B'],
+                    ],
+                    2 => [
+                        ['cod' => 'GRH2MA', 'turno' => 'Manhã'],
+                        ['cod' => 'GRH2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'GRH2NTA', 'turno' => 'Noite'],
+                    ],
+                    3 => [
+                        ['cod' => 'GRH3MA', 'turno' => 'Manhã'],
+                        ['cod' => 'GRH3NTA', 'turno' => 'Noite'],
+                    ],
+                    4 => [['cod' => 'GRH4NTA', 'turno' => 'Noite']]
+                ],
+                'HIST' => [
+                    1 => [
+                        ['cod' => 'HIST1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'HIST1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'HIST1NTA', 'turno' => 'Noite'],
+                        ['cod' => 'HIST-RB1', 'turno' => 'Regime B'],
+                    ],
+                    2 => [
+                        ['cod' => 'HIST2MA', 'turno' => 'Manhã'],
+                        ['cod' => 'HIST2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'HIST-RB2', 'turno' => 'Regime B'],
+                    ],
+                    3 => [
+                        ['cod' => 'HIST3MA', 'turno' => 'Manhã'],
+                        ['cod' => 'HIST3NTA', 'turno' => 'Noite'],
+                        ['cod' => 'HIST-RB3', 'turno' => 'Regime B'],
+                    ],
+                    4 => [
+                        ['cod' => 'HIST4NTA', 'turno' => 'Noite'],
+                        ['cod' => 'HIST-RB4', 'turno' => 'Regime B'],
+                    ]
+                ],
+                'PSIC' => [
+                    1 => [
+                        ['cod' => 'PSIC1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'PSIC1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'PSIC1NTA', 'turno' => 'Noite'],
+                    ],
+                    2 => [
+                        ['cod' => 'PSIC2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'PSIC2NTA', 'turno' => 'Noite'],
+                    ],
+                    3 => [
+                        ['cod' => 'PSIC3TA', 'turno' => 'Tarde'],
+                        ['cod' => 'PSIC3NTA', 'turno' => 'Noite'],
+                    ],
+                    4 => [['cod' => 'PSIC4NTA', 'turno' => 'Noite']]
+                ],
+                'DIRE' => [
+                    1 => [
+                        ['cod' => 'DIR1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'DIR1MB', 'turno' => 'Manhã'],
+                        ['cod' => 'DIR1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'DIR1NTA', 'turno' => 'Noite'],
+                        ['cod' => 'DIR-RB1MA', 'turno' => 'Regime B'],
+                        ['cod' => 'DIR-RB1MB', 'turno' => 'Regime B'],
+                        ['cod' => 'DIR-RB1TA', 'turno' => 'Regime B'],
+                        ['cod' => 'DIR-RB1NTA', 'turno' => 'Regime B'],
+                    ],
+                    2 => [
+                        ['cod' => 'DIR2MA', 'turno' => 'Manhã'],
+                        ['cod' => 'DIR2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'DIR2NTA', 'turno' => 'Noite'],
+                        ['cod' => 'DIR-RB2', 'turno' => 'Regime B'],
+                    ],
+                    3 => [
+                        ['cod' => 'DIR3MA', 'turno' => 'Manhã'],
+                        ['cod' => 'DIR3NTA', 'turno' => 'Noite'],
+                        ['cod' => 'DIR-RB3', 'turno' => 'Regime B'],
+                    ],
+                    4 => [
+                        ['cod' => 'DIR4NTA', 'turno' => 'Noite'],
+                        ['cod' => 'DIR-RB4', 'turno' => 'Regime B'],
+                    ],
+                    5 => [['cod' => 'DIR5NTA', 'turno' => 'Noite']]
+                ],
+                'ANLI' => [
+                    1 => [
+                        ['cod' => 'ACSP1MA', 'turno' => 'Manhã'],
+                        ['cod' => 'ACSP1MB', 'turno' => 'Manhã'],
+                        ['cod' => 'ACSP1MC', 'turno' => 'Manhã'],
+                        ['cod' => 'ACSP1MD', 'turno' => 'Manhã'],
+                        ['cod' => 'ACSP1TA', 'turno' => 'Tarde'],
+                        ['cod' => 'ACSP1TB', 'turno' => 'Tarde'],
+                        ['cod' => 'ACSP1TC', 'turno' => 'Tarde'],
+                        ['cod' => 'ACSP1NTA', 'turno' => 'Noite'],
+                        ['cod' => 'ACSP1NTB', 'turno' => 'Noite'],
+                        ['cod' => 'ACSP1NTC', 'turno' => 'Noite'],
+                    ],
+                    2 => [
+                        ['cod' => 'ACSP2MA', 'turno' => 'Manhã'],
+                        ['cod' => 'ACSP2TA', 'turno' => 'Tarde'],
+                        ['cod' => 'ACSP2NTA', 'turno' => 'Noite'],
+                    ],
+                    3 => [['cod' => 'ACSP3NTA', 'turno' => 'Noite']],
+                    4 => [['cod' => 'ACSP4NTA', 'turno' => 'Noite']]
+                ],
+                'ENFE' => [
+                    1 => array_merge(
+                        array_map(fn($l) => ['cod' => "ENF1M{$l}", 'turno' => 'Manhã'], range('A', 'H')),
+                        array_map(fn($l) => ['cod' => "ENF1T{$l}", 'turno' => 'Tarde'], range('A', 'G')),
+                        array_map(fn($l) => ['cod' => "ENF1NT{$l}", 'turno' => 'Noite'], range('A', 'C'))
+                    ),
+                    2 => array_merge(
+                        array_map(fn($l) => ['cod' => "ENF2M{$l}", 'turno' => 'Manhã'], range('A', 'I')),
+                        array_map(fn($l) => ['cod' => "ENF2T{$l}", 'turno' => 'Tarde'], range('A', 'H')),
+                        array_map(fn($l) => ['cod' => "ENF2NT{$l}", 'turno' => 'Noite'], range('A', 'C'))
+                    ),
+                    3 => array_merge(
+                        array_map(fn($l) => ['cod' => "ENF3M{$l}", 'turno' => 'Manhã'], range('A', 'G')),
+                        array_map(fn($l) => ['cod' => "ENF3T{$l}", 'turno' => 'Tarde'], range('A', 'G')),
+                        array_map(fn($l) => ['cod' => "ENF3NT{$l}", 'turno' => 'Noite'], range('A', 'D'))
+                    ),
+                    4 => array_merge(
+                        array_map(fn($l) => ['cod' => "ENF4NT{$l}", 'turno' => 'Noite'], range('A', 'H'))
+                    )
+                ],
+                'FISI' => [
+                    1 => array_merge(
+                        array_map(fn($l) => ['cod' => "FISIO1M{$l}", 'turno' => 'Manhã'], range('A', 'E')),
+                        array_map(fn($l) => ['cod' => "FISIO1NT{$l}", 'turno' => 'Noite'], range('A', 'B'))
+                    ),
+                    2 => array_merge(
+                        array_map(fn($l) => ['cod' => "FISIO2M{$l}", 'turno' => 'Manhã'], range('A', 'F')),
+                        [['cod' => 'FISIO2NTA', 'turno' => 'Noite']]
+                    ),
+                    3 => [
+                        ['cod' => 'FISIO3MA', 'turno' => 'Manhã'],
+                        ['cod' => 'FISIO3NTA', 'turno' => 'Noite']
+                    ]
+                ],
+                'CARD' => [
+                    1 => array_merge(
+                        array_map(fn($l) => ['cod' => "CARDIO1M{$l}", 'turno' => 'Manhã'], range('A', 'F')),
+                        array_map(fn($l) => ['cod' => "CARDIO1T{$l}", 'turno' => 'Tarde'], range('A', 'G')),
+                        [['cod' => 'CARDIO1NTA', 'turno' => 'Noite']]
+                    ),
+                    2 => array_merge(
+                        array_map(fn($l) => ['cod' => "CARDIO2M{$l}", 'turno' => 'Manhã'], range('A', 'D')),
+                        array_map(fn($l) => ['cod' => "CARDIO2T{$l}", 'turno' => 'Tarde'], range('A', 'F')),
+                        array_map(fn($l) => ['cod' => "CARDIO2NT{$l}", 'turno' => 'Noite'], range('A', 'B'))
+                    ),
+                    3 => array_merge(
+                        array_map(fn($l) => ['cod' => "CARDIO3NT{$l}", 'turno' => 'Noite'], range('A', 'D'))
+                    ),
+                    4 => [
+                        ['cod' => 'CARDIO4NTA', 'turno' => 'Noite'],
+                        ['cod' => 'CARDIO4NTB', 'turno' => 'Noite']
+                    ]
+                ]
+            ];
+
+            // Identificar chave do cronograma
+            $cronKey = null;
+            if (isset($cronogramaTurmas[$codCursoRaw])) {
+                $cronKey = $codCursoRaw;
+            } else {
+                $prefix = substr($codCursoRaw, 0, 4);
+                if (isset($cronogramaTurmas[$prefix])) {
+                    $cronKey = $prefix;
+                } else {
+                    foreach (array_keys($cronogramaTurmas) as $k) {
+                        if (stripos($nomeCurso, $k) !== false || stripos($codCursoRaw, $k) !== false) {
+                            $cronKey = $k;
+                            break;
+                        }
+                    }
                 }
             }
 
-            // 2. Para cada disciplina, verificar se tem turma e linha no plano
-            $stmtCheckTurma = $this->db->prepare("SELECT id, designacao, turno FROM turmas WHERE disciplina_id = ? LIMIT 1");
+            if (!$cronKey && stripos($nomeCurso, 'Enfermagem') !== false) $cronKey = 'ENFE';
+            if (!$cronKey && stripos($nomeCurso, 'Cardio') !== false) $cronKey = 'CARD';
+            if (!$cronKey && stripos($nomeCurso, 'Direito') !== false) $cronKey = 'DIRE';
+            if (!$cronKey && stripos($nomeCurso, 'Fisio') !== false) $cronKey = 'FISI';
+            if (!$cronKey && (stripos($nomeCurso, 'Análise') !== false || stripos($nomeCurso, 'Analise') !== false)) $cronKey = 'ANLI';
+
             $stmtInsTurma = $this->db->prepare("
                 INSERT INTO turmas (id, disciplina_id, docente_id, designacao, turno, sumarios_registados, sumarios_previstos, programa_carregado, dosificacao_carregada, notas_no_prazo, inquerito_media)
-                VALUES (?, ?, NULL, ?, ?, 180, 200, 1, 1, 'Sim', 4.50)
+                VALUES (:id, :disciplina_id, NULL, :designacao, :turno, 180, 200, 1, 1, 'Sim', 4.50)
+                ON DUPLICATE KEY UPDATE designacao = VALUES(designacao), turno = VALUES(turno)
             ");
 
-            $stmtCheckLinha = $this->db->prepare("SELECT id FROM linhas_cobertura WHERE plano_id = ? AND disciplina_id = ? LIMIT 1");
             $stmtInsLinha = $this->db->prepare("
-                INSERT INTO linhas_cobertura (plano_id, disciplina_id, turma_id, conformidade, regime, parecer, decisao_aprovacao)
-                VALUES (?, ?, ?, 'Por verificar', 'Tempo Parcial', 'Manter', 'Aprovar')
+                INSERT IGNORE INTO linhas_cobertura (plano_id, disciplina_id, turma_id, conformidade, regime, parecer, decisao_aprovacao)
+                VALUES (:plano_id, :disciplina_id, :turma_id, 'Por verificar', 'Tempo Parcial', 'Manter', 'Aprovar')
             ");
 
-            foreach ($discs as $d) {
-                $discId = (int)$d['id'];
-                $ano = (int)$d['ano_curricular'];
+            if ($cronKey && isset($cronogramaTurmas[$cronKey])) {
+                $specsPorAno = $cronogramaTurmas[$cronKey];
+                foreach ($specsPorAno as $ano => $turmasList) {
+                    $discsDoAno = $discsByAno[$ano] ?? [];
+                    foreach ($turmasList as $tSpec) {
+                        $tCod = $tSpec['cod'];
+                        $tTurno = $tSpec['turno'];
 
-                // Obter ou criar turma padrão se não existir
-                $stmtCheckTurma->execute([$discId]);
-                $turmaRow = $stmtCheckTurma->fetch();
+                        foreach ($discsDoAno as $d) {
+                            $discId = (int)$d['id'];
+                            $turmaRowId = "{$tCod}-D{$discId}";
 
-                if ($turmaRow && !empty($turmaRow['id'])) {
-                    $turmaId = $turmaRow['id'];
-                } else {
-                    $turmaId = "{$codCurso}{$ano}MA-D{$discId}";
-                    $def = $defaultDesignacaoByAno[$ano] ?? [
-                        'designacao' => "Turma A ({$codCurso}{$ano}MA)",
-                        'turno'      => 'Manhã'
-                    ];
-                    try {
-                        $stmtInsTurma->execute([$turmaId, $discId, $def['designacao'], $def['turno']]);
-                    } catch (\Throwable $e) {
-                        // Ignorar se turma já existir
+                            try {
+                                $stmtInsTurma->execute([
+                                    ':id'            => $turmaRowId,
+                                    ':disciplina_id' => $discId,
+                                    ':designacao'    => $tCod,
+                                    ':turno'         => $tTurno
+                                ]);
+                                $stmtInsLinha->execute([
+                                    ':plano_id'      => $planoId,
+                                    ':disciplina_id' => $discId,
+                                    ':turma_id'      => $turmaRowId
+                                ]);
+                            } catch (\Throwable $e) {
+                                // Ignorar se já existir
+                            }
+                        }
                     }
                 }
-
-                // Inserir linha no plano caso não exista
-                $stmtCheckLinha->execute([$planoId, $discId]);
-                $linhaExiste = $stmtCheckLinha->fetchColumn();
-
-                if (!$linhaExiste) {
+            } else {
+                // Fallback para cursos genéricos
+                foreach ($discs as $d) {
+                    $discId = (int)$d['id'];
+                    $ano = (int)$d['ano_curricular'];
+                    $turmaRowId = "{$codCursoRaw}{$ano}MA-D{$discId}";
                     try {
-                        $stmtInsLinha->execute([$planoId, $discId, $turmaId]);
+                        $stmtInsTurma->execute([
+                            ':id'            => $turmaRowId,
+                            ':disciplina_id' => $discId,
+                            ':designacao'    => "{$codCursoRaw}{$ano}MA",
+                            ':turno'         => 'Manhã'
+                        ]);
+                        $stmtInsLinha->execute([
+                            ':plano_id'      => $planoId,
+                            ':disciplina_id' => $discId,
+                            ':turma_id'      => $turmaRowId
+                        ]);
                     } catch (\Throwable $e) {
-                        // Ignorar duplicidade concorrente
+                        // Ignorar se já existir
                     }
                 }
             }
         } catch (\Throwable $e) {
-            // Silenciar exceções para assegurar que a leitura nunca seja interrompida
+            // Silenciar exceções para não interromper a navegação
         }
     }
 
