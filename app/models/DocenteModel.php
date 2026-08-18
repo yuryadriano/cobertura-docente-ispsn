@@ -206,60 +206,110 @@ class DocenteModel {
         $stmtTurmas->execute([$id]);
         $turmasAfetadas = $stmtTurmas->fetchAll();
 
-        // 3. Remover ficheiros físicos associados ao docente
+        // 3. Remover ficheiros físicos associados ao docente (documentos anexados)
         $docs = $this->getDocumentos($id);
         foreach ($docs as $d) {
-            $this->deleteDocumento((int)$d['id']);
+            $rawPath = str_replace('\\', '/', $d['caminho_ficheiro'] ?? '');
+            if (!empty($rawPath)) {
+                $relPath = ltrim($rawPath, '/');
+                $cleanRelPath = preg_replace('#^public/#i', '', $relPath);
+                $filename = basename($rawPath);
+                $possiblePaths = [
+                    $rawPath,
+                    $relPath,
+                    __DIR__ . '/../../public/' . $cleanRelPath,
+                    __DIR__ . '/../../' . $cleanRelPath,
+                    __DIR__ . '/../../public/' . $relPath,
+                    __DIR__ . '/../../' . $relPath,
+                    __DIR__ . '/../../public/uploads/docentes/' . $filename,
+                    __DIR__ . '/../../uploads/docentes/' . $filename,
+                ];
+                foreach ($possiblePaths as $p) {
+                    if (!empty($p) && file_exists($p) && !is_dir($p)) {
+                        @unlink($p);
+                        break;
+                    }
+                }
+            }
         }
 
         // Remover foto de CV se existir
-        $cv = $this->getCVByDocenteId($id);
-        if ($cv && !empty($cv['foto_caminho'])) {
-            $fotoPath = $cv['foto_caminho'];
+        $cv = $this->getCVStructured($id);
+        if ($cv && !empty($cv['foto_path'])) {
+            $fotoPath = str_replace('\\', '/', $cv['foto_path']);
+            $relPath = ltrim($fotoPath, '/');
+            $cleanRelPath = preg_replace('#^public/#i', '', $relPath);
+            $filename = basename($fotoPath);
             $possibleFotoPaths = [
-                __DIR__ . '/../../public/' . ltrim($fotoPath, '/'),
-                __DIR__ . '/../../' . ltrim($fotoPath, '/'),
-                __DIR__ . '/../../public/uploads/cv_fotos/' . basename($fotoPath)
+                $fotoPath,
+                $relPath,
+                __DIR__ . '/../../public/' . $cleanRelPath,
+                __DIR__ . '/../../' . $cleanRelPath,
+                __DIR__ . '/../../public/' . $relPath,
+                __DIR__ . '/../../' . $relPath,
+                __DIR__ . '/../../public/uploads/cv_fotos/' . $filename,
+                __DIR__ . '/../../uploads/cv_fotos/' . $filename
             ];
             foreach ($possibleFotoPaths as $fp) {
-                if (file_exists($fp) && !is_dir($fp)) {
+                if (!empty($fp) && file_exists($fp) && !is_dir($fp)) {
                     @unlink($fp);
                     break;
                 }
             }
         }
 
-        // 4. Limpar atribuições e atualizar conformidade
-        if (!empty($linhasAfetadas)) {
-            $stmtUpdateLinha = $this->db->prepare("UPDATE linhas_cobertura SET docente_id = NULL, conformidade = 'Não' WHERE docente_id = ?");
-            $stmtUpdateLinha->execute([$id]);
-        }
+        // 4. Executar transação de remoção e desvinculação na BD
+        try {
+            $this->db->beginTransaction();
 
-        if (!empty($turmasAfetadas)) {
-            $stmtUpdateTurma = $this->db->prepare("UPDATE turmas SET docente_id = NULL WHERE docente_id = ?");
-            $stmtUpdateTurma->execute([$id]);
-        }
-
-        // 5. Excluir da tabela de docentes
-        $stmtDel = $this->db->prepare("DELETE FROM docentes WHERE id = ?");
-        $res = $stmtDel->execute([$id]);
-
-        if ($res) {
-            $msg = "Docente '{$doc['nome']}' eliminado com sucesso do catálogo institucional.";
-            if (count($linhasAfetadas) > 0 || count($turmasAfetadas) > 0) {
-                $msg .= " Foram desvinculadas " . count($linhasAfetadas) . " disciplina(s) e " . count($turmasAfetadas) . " turma(s).";
+            // Limpar atribuições e atualizar conformidade
+            if (!empty($linhasAfetadas)) {
+                $stmtUpdateLinha = $this->db->prepare("UPDATE linhas_cobertura SET docente_id = NULL, conformidade = 'Não' WHERE docente_id = ?");
+                $stmtUpdateLinha->execute([$id]);
             }
-            return [
-                'success' => true,
-                'message' => $msg,
-                'desvinculacoes' => [
-                    'linhas' => count($linhasAfetadas),
-                    'turmas' => count($turmasAfetadas)
-                ]
-            ];
-        }
 
-        return ['success' => false, 'message' => 'Falha ao eliminar docente da base de dados.'];
+            if (!empty($turmasAfetadas)) {
+                $stmtUpdateTurma = $this->db->prepare("UPDATE turmas SET docente_id = NULL WHERE docente_id = ?");
+                $stmtUpdateTurma->execute([$id]);
+            }
+
+            // Excluir explicitamente registros associados
+            $this->db->prepare("DELETE FROM documentos_docentes WHERE docente_id = ?")->execute([$id]);
+            $this->db->prepare("DELETE FROM cvs_estruturados WHERE docente_id = ?")->execute([$id]);
+
+            // Excluir da tabela de docentes
+            $stmtDel = $this->db->prepare("DELETE FROM docentes WHERE id = ?");
+            $res = $stmtDel->execute([$id]);
+
+            $this->db->commit();
+
+            if ($res) {
+                $msg = "Docente '{$doc['nome']}' eliminado com sucesso do catálogo institucional.";
+                if (count($linhasAfetadas) > 0 || count($turmasAfetadas) > 0) {
+                    $msg .= " Foram desvinculadas " . count($linhasAfetadas) . " disciplina(s) e " . count($turmasAfetadas) . " turma(s).";
+                }
+                return [
+                    'success' => true,
+                    'message' => $msg,
+                    'desvinculacoes' => [
+                        'linhas' => count($linhasAfetadas),
+                        'turmas' => count($turmasAfetadas)
+                    ]
+                ];
+            }
+
+            return ['success' => false, 'message' => 'Falha ao eliminar docente da base de dados.'];
+        } catch (\PDOException $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return ['success' => false, 'message' => 'Erro na base de dados ao eliminar docente: ' . $e->getMessage()];
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return ['success' => false, 'message' => 'Erro ao eliminar docente: ' . $e->getMessage()];
+        }
     }
 
     /**

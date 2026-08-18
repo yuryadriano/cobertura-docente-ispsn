@@ -410,11 +410,15 @@ class ApiController {
             Response::error('ID do docente é obrigatório.');
         }
 
-        $res = $this->docenteModel->deleteDocente($docenteId);
-        if ($res['success']) {
-            Response::success($res['message'], ['desvinculacoes' => $res['desvinculacoes'] ?? null]);
-        } else {
-            Response::error($res['message'] ?? 'Falha ao eliminar docente.');
+        try {
+            $res = $this->docenteModel->deleteDocente($docenteId);
+            if ($res['success']) {
+                Response::success($res['message'], ['desvinculacoes' => $res['desvinculacoes'] ?? null]);
+            } else {
+                Response::error($res['message'] ?? 'Falha ao eliminar docente.');
+            }
+        } catch (\Throwable $e) {
+            Response::error('Erro ao eliminar docente: ' . $e->getMessage(), 500);
         }
     }
 
