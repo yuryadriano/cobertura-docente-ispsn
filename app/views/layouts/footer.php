@@ -30,6 +30,8 @@ window.switchAnoLectivo = async (ano) => {
     } catch (err) {
         alert('Erro de comunicação ao alterar o ano lectivo.');
     }
+};
+
 window.showToast = (msg, isSuccess = true) => {
     const t = document.getElementById('toast');
     if (!t) return;

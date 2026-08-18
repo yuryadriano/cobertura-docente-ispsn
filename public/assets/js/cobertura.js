@@ -251,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const userRole = window.CURRENT_USER_ROLE || 'coordenador';
         const userCursoId = window.CURRENT_USER_CURSO_ID;
 
         let canEditCoverage = false;
