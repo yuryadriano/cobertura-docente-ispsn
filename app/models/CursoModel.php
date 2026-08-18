@@ -47,11 +47,13 @@ class CursoModel {
                 d.semestre,
                 d.carga_horaria_semanal,
                 c.nome AS curso_nome,
-                doc.nome AS docente_nome
+                COALESCE(doc_lc.nome, doc.nome) AS docente_nome
             FROM turmas t
             JOIN disciplinas d ON t.disciplina_id = d.id
             JOIN cursos c ON d.curso_id = c.id
             LEFT JOIN docentes doc ON t.docente_id = doc.id
+            LEFT JOIN linhas_cobertura lc ON lc.turma_id = t.id
+            LEFT JOIN docentes doc_lc ON lc.docente_id = doc_lc.id
             WHERE c.id = :curso_id
         ";
         $params = [':curso_id' => $cursoId];

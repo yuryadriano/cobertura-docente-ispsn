@@ -455,7 +455,7 @@ class PlanoModel {
                 pc.id AS plano_id,
                 COALESCE(pc.estado, 'Rascunho') AS estado,
                 pc.data_submissao,
-                COUNT(DISTINCT lc.turma_id) AS num_turmas,
+                COUNT(DISTINCT t.designacao) AS num_turmas,
                 COUNT(lc.id) AS total_uc,
                 SUM(CASE WHEN lc.docente_id IS NOT NULL THEN 1 ELSE 0 END) AS uc_atribuidas,
                 SUM(CASE WHEN lc.conformidade = 'Sim' THEN 1 ELSE 0 END) AS conf_sim,
@@ -465,6 +465,7 @@ class PlanoModel {
             FROM cursos c
             LEFT JOIN planos_cobertura pc ON c.id = pc.curso_id AND pc.ano_lectivo = ?
             LEFT JOIN linhas_cobertura lc ON pc.id = lc.plano_id
+            LEFT JOIN turmas t ON lc.turma_id = t.id
             WHERE c.activo = 1
             GROUP BY c.id, c.nome, pc.id, pc.estado, pc.data_submissao
             ORDER BY c.nome ASC
