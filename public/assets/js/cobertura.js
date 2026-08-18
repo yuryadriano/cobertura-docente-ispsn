@@ -28,8 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 
     async function init() {
-        await fetchCursos();
-        await fetchDocentes();
+        await Promise.all([fetchCursos(), fetchDocentes()]);
         await loadPlano(currentCursoId);
     }
 

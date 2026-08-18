@@ -18,6 +18,31 @@ class PlanoModel {
         $stmt = $this->db->prepare("SELECT * FROM planos_cobertura WHERE curso_id = ? AND ano_lectivo = ?");
         $stmt->execute([$cursoId, $anoLectivo]);
         $plano = $stmt->fetch();
+
+        if (!$plano) {
+            try {
+                $stmtIns = $this->db->prepare("INSERT INTO planos_cobertura (curso_id, ano_lectivo, estado, observacoes) VALUES (?, ?, 'Rascunho', 'Plano gerado automaticamente')");
+                $stmtIns->execute([$cursoId, $anoLectivo]);
+                $planoId = (int)$this->db->lastInsertId();
+
+                $stmt = $this->db->prepare("SELECT * FROM planos_cobertura WHERE id = ?");
+                $stmt->execute([$planoId]);
+                $plano = $stmt->fetch();
+
+                // Gerar linhas de cobertura para as turmas existentes do curso
+                $stmtLinhas = $this->db->prepare("
+                    INSERT IGNORE INTO `linhas_cobertura` (`plano_id`, `disciplina_id`, `turma_id`, `conformidade`, `regime`, `parecer`)
+                    SELECT ?, d.id, t.id, 'Por verificar', 'Tempo Parcial', 'Manter'
+                    FROM turmas t
+                    JOIN disciplinas d ON t.disciplina_id = d.id
+                    WHERE d.curso_id = ? AND d.activo = 1
+                ");
+                $stmtLinhas->execute([$planoId, $cursoId]);
+            } catch (\Throwable $e) {
+                // Silenciar em caso de exceção e retornar o que existir
+            }
+        }
+
         return $plano ?: null;
     }
 
