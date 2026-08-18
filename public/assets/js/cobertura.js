@@ -547,29 +547,39 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
 
-            // Atualizar modelo em memória
-            const idx = linhasData.findIndex(l => l.id == linhaId);
-            if (idx !== -1) {
-                linhasData[idx][field] = val;
-                if (body['observacoes']) linhasData[idx]['observacoes'] = body['observacoes'];
-            }
-
-            // Atualizar estilo e cor do elemento dinamicamente
-            if (elem && field === 'decisao_aprovacao') {
-                if (val === 'Aprovar') {
-                    elem.style.color = '#166534';
-                    elem.style.background = '#F0FDF4';
-                    elem.style.borderColor = '#86EFAC';
-                } else {
-                    elem.style.color = '#C0392B';
-                    elem.style.background = '#FEF2F2';
-                    elem.style.borderColor = '#FCA5A5';
+            if (data.success) {
+                // Atualizar modelo em memória
+                const idx = linhasData.findIndex(l => l.id == linhaId);
+                if (idx !== -1) {
+                    linhasData[idx][field] = val;
+                    if (body['observacoes']) linhasData[idx]['observacoes'] = body['observacoes'];
                 }
-            }
 
-            if (window.showToast) {
-                const msg = field === 'decisao_aprovacao' ? `Decisão atualizada: ${val}` : 'Campo atualizado com sucesso';
-                window.showToast(data.message || msg, true);
+                // Atualizar estilo e cor do elemento dinamicamente
+                if (elem && field === 'decisao_aprovacao') {
+                    if (val === 'Aprovar') {
+                        elem.style.color = '#166534';
+                        elem.style.background = '#F0FDF4';
+                        elem.style.borderColor = '#86EFAC';
+                    } else {
+                        elem.style.color = '#C0392B';
+                        elem.style.background = '#FEF2F2';
+                        elem.style.borderColor = '#FCA5A5';
+                    }
+                }
+
+                if (window.showToast) {
+                    const msg = field === 'decisao_aprovacao' ? `Decisão atualizada: ${val}` : 'Campo atualizado com sucesso';
+                    window.showToast(data.message || msg, true);
+                }
+            } else {
+                if (window.showToast) {
+                    window.showToast(data.error || data.message || 'Falha ao atualizar campo.', false);
+                } else {
+                    alert('Erro: ' + (data.error || data.message || 'Falha ao atualizar campo.'));
+                }
+                // Reverter na interface (re-renderiza com os dados originais mantidos na memória)
+                renderPlano();
             }
         } catch (err) {
             if (window.showToast) {
@@ -577,6 +587,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 alert('Erro ao atualizar deliberação.');
             }
+            // Reverter em caso de erro de rede
+            renderPlano();
         }
     };
 

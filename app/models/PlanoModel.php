@@ -618,6 +618,25 @@ class PlanoModel {
         }
     }
 
+    public function recalcularConformidadeLinha(int $linhaId): bool {
+        $linha = $this->getLinhaById($linhaId);
+        if (!$linha) return false;
+
+        $conf = 'Não';
+        if ($linha['docente_id']) {
+            if ($linha['docente_estado_capacidade'] === 'Sobregregado') {
+                $conf = 'Parcial';
+            } elseif ($linha['docente_grau'] === 'Doutor' || ($linha['docente_grau'] === 'Mestre' && $linha['docente_inaarees'] === 'Sim')) {
+                $conf = 'Sim';
+            } else {
+                $conf = 'Parcial';
+            }
+        }
+
+        $stmt = $this->db->prepare("UPDATE linhas_cobertura SET conformidade = ? WHERE id = ?");
+        return $stmt->execute([$conf, $linhaId]);
+    }
+
     /**
      * Propaga atualizações de perfil/CV do docente para todas as linhas de cobertura ativas onde está atribuído
      */
