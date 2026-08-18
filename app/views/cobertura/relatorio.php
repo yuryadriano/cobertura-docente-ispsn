@@ -272,52 +272,63 @@ $pctConf = $totalUC ? round(($confSimCount / $totalUC) * 100) : 0;
         <td colspan="12" style="text-align:center; padding:20px; color:#777;">Nenhuma disciplina registada neste plano.</td>
       </tr>
     <?php else: ?>
-      <?php $idx = 1; foreach ($linhas as $l): ?>
+      <?php 
+        $turmaLetterMap = [];
+        $turmaCounters = [];
+        $letters = range('A', 'Z');
+        foreach ($linhas as $l) {
+            $rawCod = $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A');
+            $s = trim((string)$rawCod);
+            if (!isset($turmaLetterMap[$s])) {
+                if (preg_match('/Pós-Laboral|Pos-Laboral|TURMA-\d+P/i', $s)) $tTag = 'Pós-Laboral';
+                elseif (preg_match('/Regime\s*B|\-RB|RB/i', $s)) $tTag = 'Regime B';
+                elseif (preg_match('/Noite|NT|TURMA-\d+N/i', $s)) $tTag = 'Noite';
+                elseif (preg_match('/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i', $s)) $tTag = 'Tarde';
+                else $tTag = !empty($l['turno']) ? $l['turno'] : 'Manhã';
+
+                if (preg_match('/\(([A-Za-z0-9\-_]+)\)/', $s, $cm) && !preg_match('/Manh[aã]|Tarde|Noite|P[oó]s/i', $cm[1])) {
+                    $cOficial = $cm[1];
+                } else {
+                    $cOficial = trim(preg_replace('/\s*\([^)]*\)/', '', $s));
+                }
+
+                $gKey = "{$l['ano_curricular']}_{$tTag}";
+                $idxG = $turmaCounters[$gKey] ?? 0;
+                $turmaCounters[$gKey] = $idxG + 1;
+
+                if (preg_match('/Turma\s+([A-Z])/i', $s, $lm)) {
+                    $let = strtoupper($lm[1]);
+                } elseif (preg_match('/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i', $cOficial, $lm)) {
+                    $let = (in_array(strtoupper($lm[1]), ['M','T','N','P']) && str_starts_with($cOficial, 'TURMA-')) ? ($letters[$idxG] ?? 'A') : strtoupper($lm[1]);
+                } else {
+                    $let = $letters[$idxG] ?? 'A';
+                }
+
+                $turmaLetterMap[$s] = [
+                    'letra' => $let,
+                    'turno' => $tTag,
+                    'cod'   => $cOficial ?: $s
+                ];
+            }
+        }
+        $idx = 1; 
+        foreach ($linhas as $l): 
+      ?>
         <?php 
           $conf = $l['conformidade'] ?? 'Por verificar';
           $bClass = ($conf === 'Sim') ? 'badge-sim' : (($conf === 'Parcial') ? 'badge-parcial' : 'badge-nao');
+          $rawCod = $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A');
+          $infoT = $turmaLetterMap[trim((string)$rawCod)] ?? [
+              'letra' => 'A',
+              'turno' => ($l['turno'] ?? 'Manhã'),
+              'cod'   => $rawCod
+          ];
         ?>
         <tr>
           <td style="text-align:center; font-weight:700; color:#666;"><?= $idx++ ?></td>
-          <?php 
-            $rawCod = $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A');
-            $rawTurno = $l['turno'] ?? '';
-            $s = trim((string)$rawCod);
-
-            // 1. Detectar turno
-            if (preg_match('/Pós-Laboral|Pos-Laboral|TURMA-\d+P/i', $s)) {
-                $turnoTag = 'Pós-Laboral';
-            } elseif (preg_match('/Regime\s*B|\-RB|RB/i', $s)) {
-                $turnoTag = 'Regime B';
-            } elseif (preg_match('/Noite|NT|TURMA-\d+N/i', $s)) {
-                $turnoTag = 'Noite';
-            } elseif (preg_match('/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i', $s)) {
-                $turnoTag = 'Tarde';
-            } else {
-                $turnoTag = !empty($rawTurno) ? $rawTurno : 'Manhã';
-            }
-
-            // 2. Extrair código oficial limpo
-            if (preg_match('/\(([A-Za-z0-9\-_]+)\)/', $s, $cm) && !preg_match('/Manh[aã]|Tarde|Noite|P[oó]s/i', $cm[1])) {
-                $codOficial = $cm[1];
-            } else {
-                $codOficial = trim(preg_replace('/\s*\([^)]*\)/', '', $s));
-            }
-
-            // 3. Extrair letra da turma
-            if (preg_match('/Turma\s+([A-Z])/i', $s, $lm)) {
-                $letra = strtoupper($lm[1]);
-            } elseif (preg_match('/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i', $codOficial, $lm)) {
-                $letra = (in_array(strtoupper($lm[1]), ['M','T','N','P']) && str_starts_with($codOficial, 'TURMA-')) ? 'A' : strtoupper($lm[1]);
-            } else {
-                $letra = '';
-            }
-
-            $labelLetra = $letra ? "Turma {$letra}" : "Turma Única";
-          ?>
           <td>
-            <div style="font-weight:700; font-size:11px; color:#1F4E79;"><?= $labelLetra ?> · <?= htmlspecialchars($turnoTag) ?></div>
-            <div style="font-size:9.5px; color:#666; font-family:monospace;"><?= htmlspecialchars($codOficial ?: $s) ?></div>
+            <div style="font-weight:700; font-size:11px; color:#1F4E79;">Turma <?= $infoT['letra'] ?> · <?= htmlspecialchars($infoT['turno']) ?></div>
+            <div style="font-size:9.5px; color:#666; font-family:monospace;"><?= htmlspecialchars($infoT['cod']) ?></div>
           </td>
           <td style="text-align:center;"><?= $l['ano_curricular'] ?>.º</td>
           <td style="text-align:center;"><?= htmlspecialchars($l['semestre']) ?></td>

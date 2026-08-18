@@ -111,11 +111,24 @@ document.addEventListener('DOMContentLoaded', () => {
         linhasData.forEach(l => {
             const cod = l.turma_nome || `TURMA-${l.ano_curricular}A`;
             if (!setMap.has(cod)) {
-                let turno = l.turno;
-                if (!turno) {
-                    console.warn(`[cobertura.js] Turma sem turno explícito vindo da BD: ${cod}. Usando fallback 'Manhã'.`);
+                const s = String(cod).trim();
+                let turno = '';
+                if (/Pós-Laboral|Pos-Laboral|TURMA-\d+P/i.test(s)) {
+                    turno = 'Pós-Laboral';
+                } else if (/Regime\s*B|\-RB|RB/i.test(s)) {
+                    turno = 'Regime B';
+                } else if (/Noite|NT|TURMA-\d+N/i.test(s)) {
+                    turno = 'Noite';
+                } else if (/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i.test(s)) {
+                    turno = 'Tarde';
+                } else if (/Manh[aã]|\bM\b|1M|2M|3M|4M|5M|TURMA-\d+M/i.test(s)) {
+                    turno = 'Manhã';
+                } else if (l.turno) {
+                    turno = l.turno;
+                } else {
                     turno = 'Manhã';
                 }
+
                 setMap.set(cod, {
                     cod: cod,
                     ano: parseInt(l.ano_curricular) || 1,
@@ -123,61 +136,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-        turmasData = Array.from(setMap.values()).sort((a, b) => a.ano - b.ano || a.cod.localeCompare(b.cod));
+
+        // Ordenação canónica: 
+        // 1. Por Ano Curricular (1.º, 2.º, 3.º, 4.º, 5.º)
+        // 2. Por Turno (Manhã -> Tarde -> Noite -> Regime B -> Pós-Laboral)
+        // 3. Por código
+        const turnoOrder = { 'Manhã': 1, 'Tarde': 2, 'Noite': 3, 'Regime B': 4, 'Pós-Laboral': 5 };
+        const rawList = Array.from(setMap.values()).sort((a, b) => {
+            if (a.ano !== b.ano) return a.ano - b.ano;
+            const ordA = turnoOrder[a.turno] || 99;
+            const ordB = turnoOrder[b.turno] || 99;
+            if (ordA !== ordB) return ordA - ordB;
+            return a.cod.localeCompare(b.cod);
+        });
+
+        // Atribuir Letras Sequenciais (A, B, C, D...) por (Ano, Turno)
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const groupCount = {};
+
+        turmasData = rawList.map(t => {
+            const groupKey = `${t.ano}_${t.turno}`;
+            const idx = groupCount[groupKey] || 0;
+            groupCount[groupKey] = idx + 1;
+
+            let codOficial = '';
+            const codeMatch = t.cod.match(/\(([A-Za-z0-9\-_]+)\)/);
+            if (codeMatch && !/Manh[aã]|Tarde|Noite|P[oó]s/i.test(codeMatch[1])) {
+                codOficial = codeMatch[1];
+            } else {
+                codOficial = t.cod.replace(/\s*\([^)]*\)/g, '').trim();
+            }
+
+            // Extrair letra da turma ou atribuir pela sequência do turno
+            let letra = '';
+            const turmaLetraMatch = t.cod.match(/Turma\s+([A-Z])/i);
+            if (turmaLetraMatch) {
+                letra = turmaLetraMatch[1].toUpperCase();
+            } else {
+                const letterSuffixMatch = codOficial.match(/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i);
+                if (letterSuffixMatch) {
+                    const l = letterSuffixMatch[1].toUpperCase();
+                    if (['M', 'T', 'N', 'P'].includes(l) && codOficial.startsWith('TURMA-')) {
+                        letra = letters[idx] || 'A';
+                    } else {
+                        letra = l;
+                    }
+                } else {
+                    letra = letters[idx] || 'A';
+                }
+            }
+
+            const rotuloCurto = `Turma ${letra}`;
+            const rotuloCompleto = `${rotuloCurto} (${t.turno}) — ${codOficial || t.cod}`;
+
+            return {
+                ...t,
+                letra: letra,
+                codOficial: codOficial || t.cod,
+                rotuloCurto: rotuloCurto,
+                rotuloCompleto: rotuloCompleto
+            };
+        });
 
         const exists = turmasData.some(t => t.cod === selectedTurmaCod);
         if ((!selectedTurmaCod || !exists) && turmasData.length > 0) {
             selectedTurmaCod = turmasData[0].cod;
         }
-    }
-
-    function formatTurmaRotulo(rawCod, rawTurno, ano) {
-        if (!rawCod) return 'Turma';
-        let s = String(rawCod).trim();
-
-        // 1. Detectar turno real a partir do texto ou do parâmetro
-        let turno = (rawTurno || '').trim();
-        if (/Pós-Laboral|Pos-Laboral/i.test(s) || /TURMA-\d+P/i.test(s)) {
-            turno = 'Pós-Laboral';
-        } else if (/Regime\s*B|\-RB|RB/i.test(s)) {
-            turno = 'Regime B';
-        } else if (/Noite|NT/i.test(s) || /TURMA-\d+N/i.test(s)) {
-            turno = 'Noite';
-        } else if (/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i.test(s)) {
-            turno = 'Tarde';
-        } else if (/Manh[aã]|\bM\b|1M|2M|3M|4M|5M|TURMA-\d+M/i.test(s)) {
-            turno = 'Manhã';
-        }
-        if (!turno) turno = 'Manhã';
-
-        // 2. Extrair código limpo entre parênteses ou a sigla principal (ex.: ENF1MA, DIR-RB1MA, TURMA-1M)
-        let codOficial = '';
-        const codeMatch = s.match(/\(([A-Za-z0-9\-_]+)\)/);
-        if (codeMatch && !/Manh[aã]|Tarde|Noite|P[oó]s/i.test(codeMatch[1])) {
-            codOficial = codeMatch[1];
-        } else {
-            codOficial = s.replace(/\s*\([^)]*\)/g, '').trim();
-        }
-
-        // 3. Extrair letra da turma (A, B, C, D, E, F, G, H, I...)
-        let letra = '';
-        const turmaLetraMatch = s.match(/Turma\s+([A-Z])/i);
-        if (turmaLetraMatch) {
-            letra = turmaLetraMatch[1].toUpperCase();
-        } else {
-            const letterSuffixMatch = codOficial.match(/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i);
-            if (letterSuffixMatch) {
-                const l = letterSuffixMatch[1].toUpperCase();
-                if (['M', 'T', 'N', 'P'].includes(l) && codOficial.startsWith('TURMA-')) {
-                    letra = 'A';
-                } else {
-                    letra = l;
-                }
-            }
-        }
-
-        const rotuloTurma = letra ? `Turma ${letra}` : `Turma Única`;
-        return `${rotuloTurma} · ${turno} (${codOficial || s})`;
     }
 
     function populateTurmaSelect() {
@@ -188,22 +212,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const byAno = {};
+        // Agrupar por (Ano Curricular + Turno)
+        const groups = {};
         turmasData.forEach(t => {
-            byAno[t.ano] = byAno[t.ano] || [];
-            byAno[t.ano].push(t);
+            const key = `${t.ano}.º Ano — Turno ${t.turno}`;
+            groups[key] = groups[key] || [];
+            groups[key].push(t);
         });
 
         let html = '';
-        Object.keys(byAno).sort().forEach(ano => {
-            const countTurmasAno = byAno[ano].length;
-            html += `<optgroup label="${ano}.º Ano (${countTurmasAno} ${countTurmasAno === 1 ? 'Turma' : 'Turmas'})">`;
-            byAno[ano].forEach(t => {
+        Object.keys(groups).forEach(groupLabel => {
+            const list = groups[groupLabel];
+            html += `<optgroup label="${groupLabel} (${list.length} ${list.length === 1 ? 'Turma' : 'Turmas'})">`;
+            list.forEach(t => {
                 const countTotal = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod).length;
                 const countAtrib = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod && l.docente_id).length;
                 const countInfo = countTotal > 0 ? ` [${countAtrib}/${countTotal} UCs]` : '';
-                const rotulo = formatTurmaRotulo(t.cod, t.turno, t.ano);
-                html += `<option value="${t.cod}">${rotulo}${countInfo}</option>`;
+                html += `<option value="${t.cod}">${t.rotuloCompleto}${countInfo}</option>`;
             });
             html += `</optgroup>`;
         });
@@ -234,12 +259,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentTurma = turmasData.find(t => t.cod === selectedTurmaCod) || turmasData[0];
 
         if (badgeTurmaInfo && currentTurma) {
-            const rotulo = formatTurmaRotulo(currentTurma.cod, currentTurma.turno, currentTurma.ano);
-            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${rotulo} · ${atrib}/${total} UCs`;
+            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${currentTurma.rotuloCurto} (${currentTurma.turno}) · ${atrib}/${total} UCs`;
         }
         if (cardTurmaHeader && currentTurma) {
-            const rotulo = formatTurmaRotulo(currentTurma.cod, currentTurma.turno, currentTurma.ano);
-            cardTurmaHeader.textContent = `${currentTurma.ano}.º Ano — ${rotulo} — Disciplinas e Atribuições Docentes (${atrib}/${total} Atribuídas)`;
+            cardTurmaHeader.textContent = `${currentTurma.ano}.º Ano — ${currentTurma.rotuloCompleto} — Disciplinas e Atribuições Docentes (${atrib}/${total} Atribuídas)`;
         }
 
         if (pillConfPct) {

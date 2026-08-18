@@ -262,6 +262,21 @@ window.renderizarTurmas = (anoFiltro) => {
         return;
     }
 
+    const turnoOrder = { 'Manhã': 1, 'Tarde': 2, 'Noite': 3, 'Regime B': 4, 'Pós-Laboral': 5 };
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const groupCounters = {};
+
+    // Ordenar de forma canónica
+    lista.sort((a, b) => {
+        if (a.ano_curricular !== b.ano_curricular) return a.ano_curricular - b.ano_curricular;
+        const rotA = window.formatTurmaRotulo(a);
+        const rotB = window.formatTurmaRotulo(b);
+        const ordA = turnoOrder[rotA.tag] || 99;
+        const ordB = turnoOrder[rotB.tag] || 99;
+        if (ordA !== ordB) return ordA - ordB;
+        return (a.designacao || '').localeCompare(b.designacao || '');
+    });
+
     let html = '';
     lista.forEach(t => {
         const reg = parseInt(t.sumarios_registados || 0);
@@ -277,6 +292,14 @@ window.renderizarTurmas = (anoFiltro) => {
 
         const docNome = t.docente_nome ? `<b>${t.docente_nome}</b>` : `<span style="color:var(--mut); font-style:italic;">Não atribuído</span>`;
         const rotulo = window.formatTurmaRotulo(t);
+
+        // Sequência por grupo (ano + turno)
+        const gKey = `${t.ano_curricular}_${rotulo.tag}`;
+        const gIdx = groupCounters[gKey] || 0;
+        groupCounters[gKey] = gIdx + 1;
+        if (rotulo.nome === 'Turma Única' || rotulo.nome === 'Turma A') {
+            rotulo.nome = `Turma ${letters[gIdx] || 'A'}`;
+        }
 
         html += `
             <tr style="border-bottom:1px solid var(--line); ${!podeEditar ? 'opacity:0.85;' : ''}">
