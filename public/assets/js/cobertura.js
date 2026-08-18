@@ -109,92 +109,64 @@ document.addEventListener('DOMContentLoaded', () => {
     function extractTurmas() {
         const setMap = new Map();
         linhasData.forEach(l => {
-            const cod = l.turma_nome || `TURMA-${l.ano_curricular}A`;
-            if (!setMap.has(cod)) {
-                const s = String(cod).trim();
-                let turno = '';
-                if (/Pós-Laboral|Pos-Laboral|TURMA-\d+P/i.test(s)) {
-                    turno = 'Pós-Laboral';
-                } else if (/Regime\s*B|\-RB|RB/i.test(s)) {
-                    turno = 'Regime B';
-                } else if (/Noite|NT|TURMA-\d+N/i.test(s)) {
-                    turno = 'Noite';
-                } else if (/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i.test(s)) {
-                    turno = 'Tarde';
-                } else if (/Manh[aã]|\bM\b|1M|2M|3M|4M|5M|TURMA-\d+M/i.test(s)) {
-                    turno = 'Manhã';
-                } else if (l.turno) {
-                    turno = l.turno;
-                } else {
-                    turno = 'Manhã';
+            const rawDesig = String(l.turma_nome || '').trim();
+            if (!rawDesig) return;
+
+            if (!setMap.has(rawDesig)) {
+                let turno = l.turno || 'Manhã';
+                if (!l.turno) {
+                    if (/Pós-Laboral|Pos-Laboral/i.test(rawDesig)) turno = 'Pós-Laboral';
+                    else if (/Regime\s*B|\-RB/i.test(rawDesig)) turno = 'Regime B';
+                    else if (/Noite|\bNT\b/i.test(rawDesig)) turno = 'Noite';
+                    else if (/Tarde|\bT\b/i.test(rawDesig)) turno = 'Tarde';
+                    else turno = 'Manhã';
                 }
 
-                setMap.set(cod, {
-                    cod: cod,
+                // Extrair Código Oficial e Rótulo
+                let codOficial = '';
+                const codeMatch = rawDesig.match(/\(([^)]+)\)/);
+                if (codeMatch) {
+                    codOficial = codeMatch[1].trim();
+                } else {
+                    codOficial = rawDesig;
+                }
+
+                // Extrair Letra (ex: "Turma A", "Turma B")
+                let rotuloTurma = 'Turma A';
+                const turmaMatch = rawDesig.match(/Turma\s+([A-Z])/i);
+                if (turmaMatch) {
+                    rotuloTurma = `Turma ${turmaMatch[1].toUpperCase()}`;
+                } else {
+                    rotuloTurma = rawDesig;
+                }
+
+                setMap.set(rawDesig, {
+                    cod: rawDesig,
+                    codOficial: codOficial,
+                    rotuloTurma: rotuloTurma,
                     ano: parseInt(l.ano_curricular) || 1,
                     turno: turno
                 });
             }
         });
 
-        // Ordenação canónica: 
-        // 1. Por Ano Curricular (1.º, 2.º, 3.º, 4.º, 5.º)
+        // Ordenação Canónica:
+        // 1. Por Ano Curricular (1.º ao 5.º)
         // 2. Por Turno (Manhã -> Tarde -> Noite -> Regime B -> Pós-Laboral)
-        // 3. Por código
+        // 3. Por Letra / Designação
         const turnoOrder = { 'Manhã': 1, 'Tarde': 2, 'Noite': 3, 'Regime B': 4, 'Pós-Laboral': 5 };
-        const rawList = Array.from(setMap.values()).sort((a, b) => {
+        
+        turmasData = Array.from(setMap.values()).sort((a, b) => {
             if (a.ano !== b.ano) return a.ano - b.ano;
             const ordA = turnoOrder[a.turno] || 99;
             const ordB = turnoOrder[b.turno] || 99;
             if (ordA !== ordB) return ordA - ordB;
-            return a.cod.localeCompare(b.cod);
-        });
-
-        // Atribuir Letras Sequenciais (A, B, C, D...) por (Ano, Turno)
-        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const groupCount = {};
-
-        turmasData = rawList.map(t => {
-            const groupKey = `${t.ano}_${t.turno}`;
-            const idx = groupCount[groupKey] || 0;
-            groupCount[groupKey] = idx + 1;
-
-            let codOficial = '';
-            const codeMatch = t.cod.match(/\(([A-Za-z0-9\-_]+)\)/);
-            if (codeMatch && !/Manh[aã]|Tarde|Noite|P[oó]s/i.test(codeMatch[1])) {
-                codOficial = codeMatch[1];
-            } else {
-                codOficial = t.cod.replace(/\s*\([^)]*\)/g, '').trim();
-            }
-
-            // Extrair letra da turma ou atribuir pela sequência do turno
-            let letra = '';
-            const turmaLetraMatch = t.cod.match(/Turma\s+([A-Z])/i);
-            if (turmaLetraMatch) {
-                letra = turmaLetraMatch[1].toUpperCase();
-            } else {
-                const letterSuffixMatch = codOficial.match(/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i);
-                if (letterSuffixMatch) {
-                    const l = letterSuffixMatch[1].toUpperCase();
-                    if (['M', 'T', 'N', 'P'].includes(l) && codOficial.startsWith('TURMA-')) {
-                        letra = letters[idx] || 'A';
-                    } else {
-                        letra = l;
-                    }
-                } else {
-                    letra = letters[idx] || 'A';
-                }
-            }
-
-            const rotuloCurto = `Turma ${letra}`;
-            const rotuloCompleto = `${rotuloCurto} (${t.turno}) — ${codOficial || t.cod}`;
-
+            return a.cod.localeCompare(b.cod, 'pt', { numeric: true });
+        }).map(t => {
+            const rotuloFormatado = `${t.rotuloTurma} · ${t.turno} (${t.codOficial})`;
             return {
                 ...t,
-                letra: letra,
-                codOficial: codOficial || t.cod,
-                rotuloCurto: rotuloCurto,
-                rotuloCompleto: rotuloCompleto
+                rotuloFormatado: rotuloFormatado
             };
         });
 
@@ -208,32 +180,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!turmaSelect) return;
 
         if (turmasData.length === 0) {
-            turmaSelect.innerHTML = `<option value="">-- Sem Turmas --</option>`;
+            turmaSelect.innerHTML = `<option value="">-- Sem Turmas Registadas --</option>`;
             return;
         }
 
-        // Agrupar por (Ano Curricular + Turno)
-        const groups = {};
+        // Agrupamento estrito por Ano Curricular (em cascata vertical)
+        const groupsByAno = {};
         turmasData.forEach(t => {
-            const key = `${t.ano}.º Ano — Turno ${t.turno}`;
-            groups[key] = groups[key] || [];
-            groups[key].push(t);
+            const key = `${t.ano}.º Ano`;
+            groupsByAno[key] = groupsByAno[key] || [];
+            groupsByAno[key].push(t);
         });
 
         let html = '';
-        Object.keys(groups).forEach(groupLabel => {
-            const list = groups[groupLabel];
-            html += `<optgroup label="${groupLabel} (${list.length} ${list.length === 1 ? 'Turma' : 'Turmas'})">`;
+        Object.keys(groupsByAno).forEach(anoLabel => {
+            const list = groupsByAno[anoLabel];
+            html += `<optgroup label="${anoLabel} (${list.length} ${list.length === 1 ? 'Turma' : 'Turmas'})">`;
             list.forEach(t => {
-                const countTotal = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod).length;
-                const countAtrib = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod && l.docente_id).length;
+                const countTotal = linhasData.filter(l => (l.turma_nome || '') === t.cod).length;
+                const countAtrib = linhasData.filter(l => (l.turma_nome || '') === t.cod && l.docente_id).length;
                 const countInfo = countTotal > 0 ? ` [${countAtrib}/${countTotal} UCs]` : '';
-                html += `<option value="${t.cod}">${t.rotuloCompleto}${countInfo}</option>`;
+                html += `<option value="${t.cod}">${t.rotuloFormatado}${countInfo}</option>`;
             });
             html += `</optgroup>`;
         });
 
-        // Só atualiza o HTML se a estrutura de opções mudou
         if (turmaSelect.innerHTML !== html) {
             turmaSelect.innerHTML = html;
         }

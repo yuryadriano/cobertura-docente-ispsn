@@ -54,6 +54,12 @@ class PlanoModel {
      */
     public function ensureLinhasCompletas(int $planoId): void {
         try {
+            // Se o plano já possui linhas estruturadas, não há necessidade de reprocessar
+            $countExisting = (int)$this->db->query("SELECT count(*) FROM linhas_cobertura WHERE plano_id = {$planoId}")->fetchColumn();
+            if ($countExisting > 0) {
+                return;
+            }
+
             $stmtPlano = $this->db->prepare("SELECT id, curso_id, ano_lectivo FROM planos_cobertura WHERE id = ?");
             $stmtPlano->execute([$planoId]);
             $plano = $stmtPlano->fetch();
@@ -81,221 +87,219 @@ class PlanoModel {
                 $discsByAno[(int)$d['ano_curricular']][] = $d;
             }
 
-            // Matriz Institucional Oficial do ISPSN 2026/27 (207 Turmas)
+            // Matriz Institucional Oficial do ISPSN 2026/27 (Distribuição Canónica)
             $cronogramaTurmas = [
                 'CPRI' => [
                     1 => [
-                        ['cod' => 'CPRI1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'CPRI1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'CPRI1NTA', 'turno' => 'Noite'],
-                        ['cod' => 'CPRI-RB-MA', 'turno' => 'Regime B'],
-                        ['cod' => 'CPRI-RB-TA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'CPRI1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'CPRI1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'CPRI1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'CPRI-RB-MA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma E', 'cod' => 'CPRI-RB-TA', 'turno' => 'Regime B'],
                     ],
-                    2 => [['cod' => 'CPRI2TA', 'turno' => 'Tarde']],
-                    3 => [['cod' => 'CPRI3NTA', 'turno' => 'Noite']],
-                    4 => [['cod' => 'CPRI4NTA', 'turno' => 'Noite']]
+                    2 => [['letra' => 'Turma A', 'cod' => 'CPRI2TA', 'turno' => 'Tarde']],
+                    3 => [['letra' => 'Turma A', 'cod' => 'CPRI3NTA', 'turno' => 'Noite']],
+                    4 => [['letra' => 'Turma A', 'cod' => 'CPRI4NTA', 'turno' => 'Noite']]
                 ],
                 'SOCI' => [
                     1 => [
-                        ['cod' => 'SOC1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'SOC1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'SOC1NTA', 'turno' => 'Noite'],
-                        ['cod' => 'SOC-RB-MA', 'turno' => 'Regime B'],
-                        ['cod' => 'SOC-RB-TA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'SOC1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'SOC1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'SOC1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'SOC-RB-MA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma E', 'cod' => 'SOC-RB-TA', 'turno' => 'Regime B'],
                     ],
-                    2 => [['cod' => 'SOC2TA', 'turno' => 'Tarde']],
-                    3 => [['cod' => 'SOC3NTA', 'turno' => 'Noite']],
-                    4 => [['cod' => 'SOC4NTA', 'turno' => 'Noite']]
+                    2 => [['letra' => 'Turma A', 'cod' => 'SOC2TA', 'turno' => 'Tarde']],
+                    3 => [['letra' => 'Turma A', 'cod' => 'SOC3NTA', 'turno' => 'Noite']],
+                    4 => [['letra' => 'Turma A', 'cod' => 'SOC4NTA', 'turno' => 'Noite']]
                 ],
                 'CONT' => [
                     1 => [
-                        ['cod' => 'COF1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'COF1MB', 'turno' => 'Manhã'],
-                        ['cod' => 'COF1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'COF1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'COF1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'COF1MB', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma C', 'cod' => 'COF1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma D', 'cod' => 'COF1NTA', 'turno' => 'Noite'],
                     ],
                     2 => [
-                        ['cod' => 'COF2MA', 'turno' => 'Manhã'],
-                        ['cod' => 'COF2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'COF2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'COF2MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'COF2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'COF2NTA', 'turno' => 'Noite'],
                     ],
-                    3 => [['cod' => 'COF3NTA', 'turno' => 'Noite']],
-                    4 => [['cod' => 'COF4NTA', 'turno' => 'Noite']]
+                    3 => [['letra' => 'Turma A', 'cod' => 'COF3NTA', 'turno' => 'Noite']],
+                    4 => [['letra' => 'Turma A', 'cod' => 'COF4NTA', 'turno' => 'Noite']]
                 ],
                 'ECON' => [
                     1 => [
-                        ['cod' => 'ECO1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'ECO1MB', 'turno' => 'Manhã'],
-                        ['cod' => 'ECO1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'ECO1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'ECO1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'ECO1MB', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma C', 'cod' => 'ECO1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma D', 'cod' => 'ECO1NTA', 'turno' => 'Noite'],
                     ],
                     2 => [
-                        ['cod' => 'ECO2MA', 'turno' => 'Manhã'],
-                        ['cod' => 'ECO2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'ECO2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'ECO2MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'ECO2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'ECO2NTA', 'turno' => 'Noite'],
                     ],
-                    3 => [['cod' => 'ECO3NTA', 'turno' => 'Noite']],
-                    4 => [['cod' => 'ECO4NTA', 'turno' => 'Noite']]
+                    3 => [['letra' => 'Turma A', 'cod' => 'ECO3NTA', 'turno' => 'Noite']],
+                    4 => [['letra' => 'Turma A', 'cod' => 'ECO4NTA', 'turno' => 'Noite']]
                 ],
                 'GRH' => [
                     1 => [
-                        ['cod' => 'GRH1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'GRH1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'GRH1TB', 'turno' => 'Tarde'],
-                        ['cod' => 'GRH1NTA', 'turno' => 'Noite'],
-                        ['cod' => 'GRH1NTB', 'turno' => 'Noite'],
-                        ['cod' => 'GRH-RB1', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'GRH1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'GRH1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'GRH1TB', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma D', 'cod' => 'GRH1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma E', 'cod' => 'GRH1NTB', 'turno' => 'Noite'],
+                        ['letra' => 'Turma F', 'cod' => 'GRH-RB1', 'turno' => 'Regime B'],
                     ],
                     2 => [
-                        ['cod' => 'GRH2MA', 'turno' => 'Manhã'],
-                        ['cod' => 'GRH2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'GRH2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'GRH2MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'GRH2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'GRH2NTA', 'turno' => 'Noite'],
                     ],
                     3 => [
-                        ['cod' => 'GRH3MA', 'turno' => 'Manhã'],
-                        ['cod' => 'GRH3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'GRH3MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'GRH3NTA', 'turno' => 'Noite'],
                     ],
-                    4 => [['cod' => 'GRH4NTA', 'turno' => 'Noite']]
+                    4 => [['letra' => 'Turma A', 'cod' => 'GRH4NTA', 'turno' => 'Noite']]
                 ],
                 'HIST' => [
                     1 => [
-                        ['cod' => 'HIST1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'HIST1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'HIST1NTA', 'turno' => 'Noite'],
-                        ['cod' => 'HIST-RB1', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'HIST1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'HIST1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'HIST1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'HIST-RB1', 'turno' => 'Regime B'],
                     ],
                     2 => [
-                        ['cod' => 'HIST2MA', 'turno' => 'Manhã'],
-                        ['cod' => 'HIST2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'HIST-RB2', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'HIST2MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'HIST2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'HIST-RB2', 'turno' => 'Regime B'],
                     ],
                     3 => [
-                        ['cod' => 'HIST3MA', 'turno' => 'Manhã'],
-                        ['cod' => 'HIST3NTA', 'turno' => 'Noite'],
-                        ['cod' => 'HIST-RB3', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'HIST3MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'HIST3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma C', 'cod' => 'HIST-RB3', 'turno' => 'Regime B'],
                     ],
                     4 => [
-                        ['cod' => 'HIST4NTA', 'turno' => 'Noite'],
-                        ['cod' => 'HIST-RB4', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'HIST4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'HIST-RB4', 'turno' => 'Regime B'],
                     ]
                 ],
                 'PSIC' => [
                     1 => [
-                        ['cod' => 'PSIC1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'PSIC1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'PSIC1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'PSIC1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'PSIC1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'PSIC1NTA', 'turno' => 'Noite'],
                     ],
                     2 => [
-                        ['cod' => 'PSIC2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'PSIC2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'PSIC2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma B', 'cod' => 'PSIC2NTA', 'turno' => 'Noite'],
                     ],
                     3 => [
-                        ['cod' => 'PSIC3TA', 'turno' => 'Tarde'],
-                        ['cod' => 'PSIC3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'PSIC3TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma B', 'cod' => 'PSIC3NTA', 'turno' => 'Noite'],
                     ],
-                    4 => [['cod' => 'PSIC4NTA', 'turno' => 'Noite']]
+                    4 => [['letra' => 'Turma A', 'cod' => 'PSIC4NTA', 'turno' => 'Noite']]
                 ],
                 'DIRE' => [
                     1 => [
-                        ['cod' => 'DIR1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'DIR1MB', 'turno' => 'Manhã'],
-                        ['cod' => 'DIR1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'DIR1NTA', 'turno' => 'Noite'],
-                        ['cod' => 'DIR-RB1MA', 'turno' => 'Regime B'],
-                        ['cod' => 'DIR-RB1MB', 'turno' => 'Regime B'],
-                        ['cod' => 'DIR-RB1TA', 'turno' => 'Regime B'],
-                        ['cod' => 'DIR-RB1NTA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'DIR1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'DIR1MB', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma C', 'cod' => 'DIR1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma D', 'cod' => 'DIR1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma E', 'cod' => 'DIR-RB1MA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma F', 'cod' => 'DIR-RB1MB', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma G', 'cod' => 'DIR-RB1TA', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma H', 'cod' => 'DIR-RB1NTA', 'turno' => 'Regime B'],
                     ],
                     2 => [
-                        ['cod' => 'DIR2MA', 'turno' => 'Manhã'],
-                        ['cod' => 'DIR2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'DIR2NTA', 'turno' => 'Noite'],
-                        ['cod' => 'DIR-RB2', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'DIR2MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'DIR2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma C', 'cod' => 'DIR2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'DIR-RB2', 'turno' => 'Regime B'],
                     ],
                     3 => [
-                        ['cod' => 'DIR3MA', 'turno' => 'Manhã'],
-                        ['cod' => 'DIR3NTA', 'turno' => 'Noite'],
-                        ['cod' => 'DIR-RB3', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'DIR3MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'DIR3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma C', 'cod' => 'DIR-RB3', 'turno' => 'Regime B'],
                     ],
                     4 => [
-                        ['cod' => 'DIR4NTA', 'turno' => 'Noite'],
-                        ['cod' => 'DIR-RB4', 'turno' => 'Regime B'],
+                        ['letra' => 'Turma A', 'cod' => 'DIR4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'DIR-RB4', 'turno' => 'Regime B'],
                     ],
-                    5 => [['cod' => 'DIR5NTA', 'turno' => 'Noite']]
+                    5 => [['letra' => 'Turma A', 'cod' => 'DIR5NTA', 'turno' => 'Noite']]
                 ],
                 'ANLI' => [
                     1 => [
-                        ['cod' => 'ACSP1MA', 'turno' => 'Manhã'],
-                        ['cod' => 'ACSP1MB', 'turno' => 'Manhã'],
-                        ['cod' => 'ACSP1MC', 'turno' => 'Manhã'],
-                        ['cod' => 'ACSP1MD', 'turno' => 'Manhã'],
-                        ['cod' => 'ACSP1TA', 'turno' => 'Tarde'],
-                        ['cod' => 'ACSP1TB', 'turno' => 'Tarde'],
-                        ['cod' => 'ACSP1TC', 'turno' => 'Tarde'],
-                        ['cod' => 'ACSP1NTA', 'turno' => 'Noite'],
-                        ['cod' => 'ACSP1NTB', 'turno' => 'Noite'],
-                        ['cod' => 'ACSP1NTC', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'ACSP1MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'ACSP1MB', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma C', 'cod' => 'ACSP1MC', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma D', 'cod' => 'ACSP1MD', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma E', 'cod' => 'ACSP1TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma F', 'cod' => 'ACSP1TB', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma G', 'cod' => 'ACSP1TC', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma H', 'cod' => 'ACSP1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma I', 'cod' => 'ACSP1NTB', 'turno' => 'Noite'],
+                        ['letra' => 'Turma J', 'cod' => 'ACSP1NTC', 'turno' => 'Noite'],
                     ],
                     2 => [
-                        ['cod' => 'ACSP2MA', 'turno' => 'Manhã'],
-                        ['cod' => 'ACSP2TA', 'turno' => 'Tarde'],
-                        ['cod' => 'ACSP2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma A', 'cod' => 'ACSP2MA', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma B', 'cod' => 'ACSP2MB', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma C', 'cod' => 'ACSP2MC', 'turno' => 'Manhã'],
+                        ['letra' => 'Turma D', 'cod' => 'ACSP2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma E', 'cod' => 'ACSP2TB', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma F', 'cod' => 'ACSP2TC', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma G', 'cod' => 'ACSP2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma H', 'cod' => 'ACSP2NTB', 'turno' => 'Noite'],
+                        ['letra' => 'Turma I', 'cod' => 'ACSP2NTC', 'turno' => 'Noite'],
                     ],
-                    3 => [['cod' => 'ACSP3NTA', 'turno' => 'Noite']],
-                    4 => [['cod' => 'ACSP4NTA', 'turno' => 'Noite']]
+                    3 => [['letra' => 'Turma A', 'cod' => 'ACSP3NTA', 'turno' => 'Noite']]
                 ],
                 'ENFE' => [
                     1 => array_merge(
-                        array_map(fn($l) => ['cod' => "ENF1M{$l}", 'turno' => 'Manhã'], range('A', 'H')),
-                        array_map(fn($l) => ['cod' => "ENF1T{$l}", 'turno' => 'Tarde'], range('A', 'G')),
-                        array_map(fn($l) => ['cod' => "ENF1NT{$l}", 'turno' => 'Noite'], range('A', 'C'))
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "ENF1M{$l}"]; }, range(0, 7), range('A', 'H')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Tarde', 'cod' => "ENF1T{$l}"]; }, range(0, 6), range('A', 'G'), range('I', 'O')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Noite', 'cod' => "ENF1NT{$l}"]; }, range(0, 2), range('A', 'C'), range('P', 'R'))
                     ),
                     2 => array_merge(
-                        array_map(fn($l) => ['cod' => "ENF2M{$l}", 'turno' => 'Manhã'], range('A', 'I')),
-                        array_map(fn($l) => ['cod' => "ENF2T{$l}", 'turno' => 'Tarde'], range('A', 'H')),
-                        array_map(fn($l) => ['cod' => "ENF2NT{$l}", 'turno' => 'Noite'], range('A', 'C'))
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "ENF2M{$l}"]; }, range(0, 8), range('A', 'I')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Tarde', 'cod' => "ENF2T{$l}"]; }, range(0, 7), range('A', 'H'), range('J', 'Q')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Noite', 'cod' => "ENF2NT{$l}"]; }, range(0, 2), range('A', 'C'), range('R', 'T'))
                     ),
                     3 => array_merge(
-                        array_map(fn($l) => ['cod' => "ENF3M{$l}", 'turno' => 'Manhã'], range('A', 'G')),
-                        array_map(fn($l) => ['cod' => "ENF3T{$l}", 'turno' => 'Tarde'], range('A', 'G')),
-                        array_map(fn($l) => ['cod' => "ENF3NT{$l}", 'turno' => 'Noite'], range('A', 'D'))
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "ENF3M{$l}"]; }, range(0, 6), range('A', 'G')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Tarde', 'cod' => "ENF3T{$l}"]; }, range(0, 6), range('A', 'G'), range('H', 'N')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Noite', 'cod' => "ENF3NT{$l}"]; }, range(0, 3), range('A', 'D'), range('O', 'R'))
                     ),
-                    4 => array_merge(
-                        array_map(fn($l) => ['cod' => "ENF4NT{$l}", 'turno' => 'Noite'], range('A', 'H'))
-                    )
+                    4 => array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Noite', 'cod' => "ENF4NT{$l}"]; }, range(0, 7), range('A', 'H'))
                 ],
                 'FISI' => [
                     1 => array_merge(
-                        array_map(fn($l) => ['cod' => "FISIO1M{$l}", 'turno' => 'Manhã'], range('A', 'E')),
-                        array_map(fn($l) => ['cod' => "FISIO1NT{$l}", 'turno' => 'Noite'], range('A', 'B'))
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "FISIO1M{$l}"]; }, range(0, 4), range('A', 'E')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Noite', 'cod' => "FISIO1NT{$l}"]; }, range(0, 1), range('A', 'B'), ['F', 'G'])
                     ),
                     2 => array_merge(
-                        array_map(fn($l) => ['cod' => "FISIO2M{$l}", 'turno' => 'Manhã'], range('A', 'F')),
-                        [['cod' => 'FISIO2NTA', 'turno' => 'Noite']]
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "FISIO2M{$l}"]; }, range(0, 5), range('A', 'F')),
+                        [['letra' => 'Turma G', 'turno' => 'Noite', 'cod' => 'FISIO2NTA']]
                     ),
                     3 => [
-                        ['cod' => 'FISIO3MA', 'turno' => 'Manhã'],
-                        ['cod' => 'FISIO3NTA', 'turno' => 'Noite']
+                        ['letra' => 'Turma A', 'turno' => 'Manhã', 'cod' => 'FISIO3MA'],
+                        ['letra' => 'Turma B', 'turno' => 'Noite', 'cod' => 'FISIO3NTA'],
                     ]
                 ],
                 'CARD' => [
                     1 => array_merge(
-                        array_map(fn($l) => ['cod' => "CARDIO1M{$l}", 'turno' => 'Manhã'], range('A', 'F')),
-                        array_map(fn($l) => ['cod' => "CARDIO1T{$l}", 'turno' => 'Tarde'], range('A', 'G')),
-                        [['cod' => 'CARDIO1NTA', 'turno' => 'Noite']]
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "CARDIO1M{$l}"]; }, range(0, 5), range('A', 'F')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Tarde', 'cod' => "CARDIO1T{$l}"]; }, range(0, 6), range('A', 'G'), range('G', 'M')),
+                        [['letra' => 'Turma N', 'turno' => 'Noite', 'cod' => 'CARDIO1NTA']]
                     ),
                     2 => array_merge(
-                        array_map(fn($l) => ['cod' => "CARDIO2M{$l}", 'turno' => 'Manhã'], range('A', 'D')),
-                        array_map(fn($l) => ['cod' => "CARDIO2T{$l}", 'turno' => 'Tarde'], range('A', 'F')),
-                        array_map(fn($l) => ['cod' => "CARDIO2NT{$l}", 'turno' => 'Noite'], range('A', 'B'))
+                        array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Manhã', 'cod' => "CARDIO2M{$l}"]; }, range(0, 3), range('A', 'D')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Tarde', 'cod' => "CARDIO2T{$l}"]; }, range(0, 5), range('A', 'F'), range('E', 'J')),
+                        array_map(function($idx, $l, $letraOffset) { return ['letra' => "Turma {$letraOffset}", 'turno' => 'Noite', 'cod' => "CARDIO2NT{$l}"]; }, range(0, 1), range('A', 'B'), ['K', 'L'])
                     ),
-                    3 => array_merge(
-                        array_map(fn($l) => ['cod' => "CARDIO3NT{$l}", 'turno' => 'Noite'], range('A', 'D'))
-                    ),
-                    4 => [
-                        ['cod' => 'CARDIO4NTA', 'turno' => 'Noite'],
-                        ['cod' => 'CARDIO4NTB', 'turno' => 'Noite']
-                    ]
+                    3 => array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Noite', 'cod' => "CARDIO3NT{$l}"]; }, range(0, 3), range('A', 'D')),
+                    4 => array_map(function($idx, $l) { return ['letra' => "Turma {$l}", 'turno' => 'Noite', 'cod' => "CARDIO4NT{$l}"]; }, range(0, 1), range('A', 'B'))
                 ]
             ];
 
@@ -340,7 +344,9 @@ class PlanoModel {
                     $discsDoAno = $discsByAno[$ano] ?? [];
                     foreach ($turmasList as $tSpec) {
                         $tCod = $tSpec['cod'];
+                        $tLetra = $tSpec['letra'] ?? 'Turma A';
                         $tTurno = $tSpec['turno'];
+                        $desigCompleta = "{$tLetra} ({$tCod})";
 
                         foreach ($discsDoAno as $d) {
                             $discId = (int)$d['id'];
@@ -350,7 +356,7 @@ class PlanoModel {
                                 $stmtInsTurma->execute([
                                     ':id'            => $turmaRowId,
                                     ':disciplina_id' => $discId,
-                                    ':designacao'    => $tCod,
+                                    ':designacao'    => $desigCompleta,
                                     ':turno'         => $tTurno
                                 ]);
                                 $stmtInsLinha->execute([

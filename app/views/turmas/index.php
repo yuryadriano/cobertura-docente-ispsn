@@ -131,7 +131,7 @@ window.TODAS_TURMAS = [];
 
 window.formatTurmaRotulo = (t) => {
     const rawCod = t.designacao || '';
-    const rawTurno = t.turno || '';
+    const rawTurno = t.turno || 'Manhã';
     let s = String(rawCod).trim();
 
     // 1. Detectar turno
@@ -139,19 +139,19 @@ window.formatTurmaRotulo = (t) => {
     let icon = '🟡';
     let badgeClass = 'turno-manha';
 
-    if (/Pós-Laboral|Pos-Laboral/i.test(s) || /TURMA-\d+P/i.test(s)) {
+    if (/Pós-Laboral|Pos-Laboral/i.test(s) || turno === 'Pós-Laboral') {
         turno = 'Pós-Laboral';
         icon = '🟣';
         badgeClass = 'turno-regimeb';
-    } else if (/Regime\s*B|\-RB|RB/i.test(s)) {
+    } else if (/Regime\s*B|\-RB/i.test(s) || turno === 'Regime B') {
         turno = 'Regime B';
         icon = '🟣';
         badgeClass = 'turno-regimeb';
-    } else if (/Noite|NT/i.test(s) || /TURMA-\d+N/i.test(s)) {
+    } else if (/Noite|\bNT\b/i.test(s) || turno === 'Noite') {
         turno = 'Noite';
         icon = '🔵';
         badgeClass = 'turno-noite';
-    } else if (/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i.test(s)) {
+    } else if (/Tarde|\bT\b/i.test(s) || turno === 'Tarde') {
         turno = 'Tarde';
         icon = '🟠';
         badgeClass = 'turno-tarde';
@@ -163,32 +163,23 @@ window.formatTurmaRotulo = (t) => {
 
     // 2. Extrair código oficial limpo
     let codOficial = '';
-    const codeMatch = s.match(/\(([A-Za-z0-9\-_]+)\)/);
-    if (codeMatch && !/Manh[aã]|Tarde|Noite|P[oó]s/i.test(codeMatch[1])) {
-        codOficial = codeMatch[1];
+    const codeMatch = s.match(/\(([^)]+)\)/);
+    if (codeMatch) {
+        codOficial = codeMatch[1].trim();
     } else {
         codOficial = s.replace(/\s*\([^)]*\)/g, '').trim();
     }
 
-    // 3. Extrair letra da turma
-    let letra = '';
-    const turmaLetraMatch = s.match(/Turma\s+([A-Z])/i);
-    if (turmaLetraMatch) {
-        letra = turmaLetraMatch[1].toUpperCase();
+    // 3. Extrair letra da turma (ex: "Turma A", "Turma B")
+    let rotuloNome = 'Turma A';
+    const turmaMatch = s.match(/Turma\s+([A-Z])/i);
+    if (turmaMatch) {
+        rotuloNome = `Turma ${turmaMatch[1].toUpperCase()}`;
     } else {
-        const letterSuffixMatch = codOficial.match(/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i);
-        if (letterSuffixMatch) {
-            const l = letterSuffixMatch[1].toUpperCase();
-            if (['M', 'T', 'N', 'P'].includes(l) && codOficial.startsWith('TURMA-')) {
-                letra = 'A';
-            } else {
-                letra = l;
-            }
-        }
+        rotuloNome = s;
     }
 
-    const labelLetra = letra ? `Turma ${letra}` : `Turma Única`;
-    return { nome: labelLetra, tag: turno, icon: icon, badgeClass: badgeClass, codOficial: codOficial || s };
+    return { nome: rotuloNome, tag: turno, icon: icon, badgeClass: badgeClass, codOficial: codOficial || s };
 };
 
 window.carregarTurmas = async (cursoId) => {
@@ -263,10 +254,8 @@ window.renderizarTurmas = (anoFiltro) => {
     }
 
     const turnoOrder = { 'Manhã': 1, 'Tarde': 2, 'Noite': 3, 'Regime B': 4, 'Pós-Laboral': 5 };
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const groupCounters = {};
 
-    // Ordenar de forma canónica
+    // Ordenar de forma canónica por Ano -> Turno -> Letra / Designação
     lista.sort((a, b) => {
         if (a.ano_curricular !== b.ano_curricular) return a.ano_curricular - b.ano_curricular;
         const rotA = window.formatTurmaRotulo(a);
@@ -274,7 +263,7 @@ window.renderizarTurmas = (anoFiltro) => {
         const ordA = turnoOrder[rotA.tag] || 99;
         const ordB = turnoOrder[rotB.tag] || 99;
         if (ordA !== ordB) return ordA - ordB;
-        return (a.designacao || '').localeCompare(b.designacao || '');
+        return (a.designacao || '').localeCompare(b.designacao || '', 'pt', { numeric: true });
     });
 
     let html = '';
@@ -292,14 +281,6 @@ window.renderizarTurmas = (anoFiltro) => {
 
         const docNome = t.docente_nome ? `<b>${t.docente_nome}</b>` : `<span style="color:var(--mut); font-style:italic;">Não atribuído</span>`;
         const rotulo = window.formatTurmaRotulo(t);
-
-        // Sequência por grupo (ano + turno)
-        const gKey = `${t.ano_curricular}_${rotulo.tag}`;
-        const gIdx = groupCounters[gKey] || 0;
-        groupCounters[gKey] = gIdx + 1;
-        if (rotulo.nome === 'Turma Única' || rotulo.nome === 'Turma A') {
-            rotulo.nome = `Turma ${letters[gIdx] || 'A'}`;
-        }
 
         html += `
             <tr style="border-bottom:1px solid var(--line); ${!podeEditar ? 'opacity:0.85;' : ''}">
