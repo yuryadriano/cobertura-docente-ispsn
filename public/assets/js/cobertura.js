@@ -149,7 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.keys(byAno).sort().forEach(ano => {
             html += `<optgroup label="${ano}.º Ano">`;
             byAno[ano].forEach(t => {
-                html += `<option value="${t.cod}">${t.cod} · ${t.turno}</option>`;
+                const countTotal = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod).length;
+                const countAtrib = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === t.cod && l.docente_id).length;
+                const countInfo = countTotal > 0 ? ` (${countAtrib}/${countTotal} UCs)` : '';
+                html += `<option value="${t.cod}">${t.cod} · ${t.turno}${countInfo}</option>`;
             });
             html += `</optgroup>`;
         });
@@ -171,18 +174,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateKPIsAndHeader() {
-        const total = linhasData.length;
-        const atrib = linhasData.filter(l => l.docente_id).length;
-        const conf  = linhasData.filter(l => l.conformidade === 'Sim').length;
+        const turmaLinhas = linhasData.filter(l => (l.turma_nome || `TURMA-${l.ano_curricular}A`) === selectedTurmaCod);
+        const total = turmaLinhas.length || linhasData.length;
+        const atrib = (turmaLinhas.length ? turmaLinhas : linhasData).filter(l => l.docente_id).length;
+        const conf  = (turmaLinhas.length ? turmaLinhas : linhasData).filter(l => l.conformidade === 'Sim').length;
         const pctConf = total ? Math.round((conf / total) * 100) : 0;
 
         const currentTurma = turmasData.find(t => t.cod === selectedTurmaCod) || turmasData[0];
 
         if (badgeTurmaInfo && currentTurma) {
-            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${currentTurma.turno}`;
+            badgeTurmaInfo.textContent = `${currentTurma.ano}.º Ano · ${currentTurma.turno} (${atrib}/${total} UCs)`;
         }
         if (cardTurmaHeader && currentTurma) {
-            cardTurmaHeader.textContent = `Turma ${currentTurma.cod} · ${currentTurma.ano}.º Ano · ${currentTurma.turno} — disciplinas e docentes`;
+            cardTurmaHeader.textContent = `Turma ${currentTurma.cod} · ${currentTurma.ano}.º Ano · ${currentTurma.turno} — disciplinas e docentes (${atrib}/${total} atribuídas)`;
         }
 
         if (pillConfPct) {
@@ -191,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (pillAtribStat) {
-            pillAtribStat.textContent = `${atrib}/${total} atribuições · ${turmasData.length} turmas`;
+            pillAtribStat.textContent = `${atrib}/${total} atribuições`;
         }
     }
 
@@ -499,7 +503,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('index.php?api=linha_salvar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ linha_id: linhaId, docente_id: docenteId || null })
+                body: JSON.stringify({
+                    linha_id: linhaId,
+                    docente_id: docenteId || null,
+                    propagate_sequential: true
+                })
             });
             const data = await res.json();
             if (data.success) {
@@ -513,14 +521,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     linhasData[idx].docente_nome = docenteId ? (docentesMap[parseInt(docenteId)]?.nome || null) : null;
                 }
 
+                // Se houver par sequencial sincronizado, atualizar também em memória
+                if (data.pair_linha) {
+                    const pIdx = linhasData.findIndex(l => l.id == data.pair_linha.id || l.linha_id == data.pair_linha.id);
+                    if (pIdx !== -1) {
+                        linhasData[pIdx] = data.pair_linha;
+                    }
+                }
+
                 // Re-renderizar a tabela SEM fetch ao servidor
                 renderPlano();
 
                 const toast = document.createElement('div');
-                toast.style.cssText = 'position:fixed; bottom:24px; right:24px; background:#1baf7a; color:#fff; padding:12px 20px; border-radius:8px; font-weight:700; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.15); font-size:13px;';
-                toast.textContent = '✅ Atribuição docente atualizada com sucesso!';
+                toast.style.cssText = 'position:fixed; bottom:24px; right:24px; background:#0F2537; color:#fff; padding:12px 20px; border-radius:8px; font-weight:700; z-index:9999; box-shadow:0 6px 16px rgba(0,0,0,0.2); font-size:13px; border-left:4px solid #1baf7a;';
+                if (data.pair_nome) {
+                    toast.innerHTML = `✅ Atribuição atualizada e <b>sincronizada com ${data.pair_nome}</b> (continuidade semestral)!`;
+                } else {
+                    toast.innerHTML = '✅ Atribuição docente atualizada com sucesso!';
+                }
                 document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 2500);
+                setTimeout(() => toast.remove(), 3200);
 
                 // Atualizar KPIs sem recarregar tudo
                 updateKPIsAndHeader();
@@ -541,8 +561,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (data.success) {
-                alert(data.message || 'Docente atribuído a esta disciplina em todas as turmas do ano!');
-                loadPlano(currentCursoId);
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed; bottom:24px; right:24px; background:#0F2537; color:#fff; padding:12px 20px; border-radius:8px; font-weight:700; z-index:9999; box-shadow:0 6px 16px rgba(0,0,0,0.2); font-size:13px; border-left:4px solid #1baf7a;';
+                toast.innerHTML = `✅ ${data.message || 'Docente atribuído a todas as turmas do ano!'}`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3500);
+
+                await loadPlano(currentCursoId);
             } else {
                 alert('Erro: ' + (data.error || data.message || 'Falha ao replicar atribuição por turmas.'));
             }

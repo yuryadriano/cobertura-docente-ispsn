@@ -61,17 +61,44 @@ class PlanoModel {
 
             $cursoId = (int)$plano['curso_id'];
 
+            // Obter código/prefixo do curso
+            $stmtCurso = $this->db->prepare("SELECT id, codigo, nome FROM cursos WHERE id = ?");
+            $stmtCurso->execute([$cursoId]);
+            $curso = $stmtCurso->fetch();
+            $codCurso = strtoupper(!empty($curso['codigo']) ? trim($curso['codigo']) : substr(preg_replace('/[^A-Za-z]/', '', $curso['nome'] ?? 'CUR'), 0, 4));
+
             // 1. Obter todas as disciplinas ativas deste curso
             $stmtDiscs = $this->db->prepare("SELECT * FROM disciplinas WHERE curso_id = ? AND activo = 1 ORDER BY ano_curricular ASC, semestre ASC, nome ASC");
             $stmtDiscs->execute([$cursoId]);
             $discs = $stmtDiscs->fetchAll();
             if (empty($discs)) return;
 
+            // Mapeamento de designações padrão existentes por ano para consistência
+            $stmtExistingTurmas = $this->db->prepare("
+                SELECT d.ano_curricular, t.designacao, t.turno 
+                FROM turmas t 
+                JOIN disciplinas d ON t.disciplina_id = d.id 
+                WHERE d.curso_id = ? AND t.designacao IS NOT NULL AND t.designacao != ''
+                ORDER BY t.id ASC
+            ");
+            $stmtExistingTurmas->execute([$cursoId]);
+            $existingTurmaRows = $stmtExistingTurmas->fetchAll();
+            $defaultDesignacaoByAno = [];
+            foreach ($existingTurmaRows as $r) {
+                $anoCur = (int)$r['ano_curricular'];
+                if (!isset($defaultDesignacaoByAno[$anoCur])) {
+                    $defaultDesignacaoByAno[$anoCur] = [
+                        'designacao' => $r['designacao'],
+                        'turno'      => $r['turno'] ?: 'Manhã'
+                    ];
+                }
+            }
+
             // 2. Para cada disciplina, verificar se tem turma e linha no plano
-            $stmtCheckTurma = $this->db->prepare("SELECT id FROM turmas WHERE disciplina_id = ? LIMIT 1");
+            $stmtCheckTurma = $this->db->prepare("SELECT id, designacao, turno FROM turmas WHERE disciplina_id = ? LIMIT 1");
             $stmtInsTurma = $this->db->prepare("
                 INSERT INTO turmas (id, disciplina_id, docente_id, designacao, turno, sumarios_registados, sumarios_previstos, programa_carregado, dosificacao_carregada, notas_no_prazo, inquerito_media)
-                VALUES (?, ?, NULL, ?, 'Manhã', 180, 200, 1, 1, 'Sim', 4.50)
+                VALUES (?, ?, NULL, ?, ?, 180, 200, 1, 1, 'Sim', 4.50)
             ");
 
             $stmtCheckLinha = $this->db->prepare("SELECT id FROM linhas_cobertura WHERE plano_id = ? AND disciplina_id = ? LIMIT 1");
@@ -86,13 +113,18 @@ class PlanoModel {
 
                 // Obter ou criar turma padrão se não existir
                 $stmtCheckTurma->execute([$discId]);
-                $turmaId = $stmtCheckTurma->fetchColumn();
+                $turmaRow = $stmtCheckTurma->fetch();
 
-                if (!$turmaId) {
-                    $turmaId = "TURMA-{$ano}M-D{$discId}";
-                    $designacao = "Turma A ({$ano}.º Ano)";
+                if ($turmaRow && !empty($turmaRow['id'])) {
+                    $turmaId = $turmaRow['id'];
+                } else {
+                    $turmaId = "{$codCurso}{$ano}MA-D{$discId}";
+                    $def = $defaultDesignacaoByAno[$ano] ?? [
+                        'designacao' => "Turma A ({$codCurso}{$ano}MA)",
+                        'turno'      => 'Manhã'
+                    ];
                     try {
-                        $stmtInsTurma->execute([$turmaId, $discId, $designacao]);
+                        $stmtInsTurma->execute([$turmaId, $discId, $def['designacao'], $def['turno']]);
                     } catch (\Throwable $e) {
                         // Ignorar se turma já existir
                     }
@@ -152,7 +184,7 @@ class PlanoModel {
         $stmtCheck->execute([$linhaId]);
         $estado = $stmtCheck->fetchColumn();
 
-        if (in_array($estado, ['Submetido', 'Aprovado']) && !Auth::hasRole(['admin', 'presidente'])) {
+        if ($estado === 'Validado' && !Auth::hasRole(['admin', 'presidente'])) {
             return false;
         }
 
@@ -237,7 +269,67 @@ class PlanoModel {
         return $stmt->execute($params);
     }
 
-    public function applyDocenteToAllTurmasSameYear(int $planoId, int $disciplinaId, ?int $docenteId): bool {
+    /**
+     * Localiza a linha correspondente do par sequencial (ex: Semestre 1 -> Semestre 2)
+     */
+    public function findSequentialPairLinha(int $linhaId): ?array {
+        $linha = $this->getLinhaById($linhaId);
+        if (!$linha) return null;
+
+        $nome = trim($linha['disciplina_nome'] ?? '');
+        $planoId = (int)$linha['plano_id'];
+        $ano = (int)$linha['ano_curricular'];
+        $turmaId = $linha['turma_id'];
+
+        // Determinar nome do par sequencial
+        $targetNome = null;
+        if (preg_match('/\bI\b(?!\s*I)/u', $nome) && !preg_match('/\b(II|III|IV|VI)\b/u', $nome)) {
+            $targetNome = preg_replace('/\bI\b(?!\s*I)/u', 'II', $nome);
+        } elseif (preg_match('/\bIII\b/u', $nome)) {
+            $targetNome = preg_replace('/\bIII\b/u', 'IV', $nome);
+        } elseif (preg_match('/\bII\b/u', $nome) && !preg_match('/\bIII\b/u', $nome)) {
+            $targetNome = preg_replace('/\bII\b/u', 'I', $nome);
+        } elseif (preg_match('/\bIV\b/u', $nome)) {
+            $targetNome = preg_replace('/\bIV\b/u', 'III', $nome);
+        } else {
+            return null;
+        }
+
+        // Extrair raiz sem parênteses para matching flexível (ex: Microeconomia I (Consumo) -> Microeconomia II (Mercados))
+        $rootTarget = preg_replace('/\s*\(.*?\)/', '', $targetNome);
+        $rootTarget = trim(preg_replace('/\s+/', ' ', $rootTarget));
+        $rootTargetBase = trim(preg_replace('/\b(I|II|III|IV)\b/u', '', $rootTarget));
+
+        $stmt = $this->db->prepare("
+            SELECT * FROM vw_linhas_cobertura_detalhada
+            WHERE plano_id = :plano_id
+              AND ano_curricular = :ano
+              AND linha_id != :linha_id
+        ");
+        $stmt->execute([
+            ':plano_id' => $planoId,
+            ':ano'      => $ano,
+            ':linha_id' => $linhaId
+        ]);
+        $candidates = $stmt->fetchAll();
+
+        foreach ($candidates as $c) {
+            if ($c['turma_id'] === $turmaId || (empty($c['turma_id']) && empty($turmaId))) {
+                $cNome = trim($c['disciplina_nome']);
+                $cRoot = preg_replace('/\s*\(.*?\)/', '', $cNome);
+                $cRoot = trim(preg_replace('/\s+/', ' ', $cRoot));
+                $cRootBase = trim(preg_replace('/\b(I|II|III|IV)\b/u', '', $cRoot));
+
+                if (strcasecmp($cNome, $targetNome) === 0 || strcasecmp($cRoot, $rootTarget) === 0 || (strcasecmp($cRootBase, $rootTargetBase) === 0 && !empty($rootTargetBase))) {
+                    return $c;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function applyDocenteToAllTurmasSameYear(int $planoId, int $disciplinaId, ?int $docenteId, bool $includeSequential = true): array {
         $conf = 'Não';
         if ($docenteId) {
             require_once __DIR__ . '/DocenteModel.php';
@@ -258,6 +350,7 @@ class PlanoModel {
             }
         }
 
+        // 1. Atualizar a disciplina em todas as turmas do plano
         $stmt = $this->db->prepare("
             UPDATE linhas_cobertura
             SET docente_id = :docente_id,
@@ -265,12 +358,41 @@ class PlanoModel {
             WHERE plano_id = :plano_id 
               AND disciplina_id = :disciplina_id
         ");
-        return $stmt->execute([
+        $stmt->execute([
             ':docente_id'    => $docenteId,
             ':conf'          => $conf,
             ':plano_id'      => $planoId,
             ':disciplina_id' => $disciplinaId
         ]);
+        $affectedCount = $stmt->rowCount();
+
+        // 2. Se houver disciplina sequencial correspondente, replicar também
+        $pairNome = null;
+        if ($includeSequential) {
+            $stmtOne = $this->db->prepare("SELECT id FROM linhas_cobertura WHERE plano_id = ? AND disciplina_id = ? LIMIT 1");
+            $stmtOne->execute([$planoId, $disciplinaId]);
+            $sampleLinhaId = (int)$stmtOne->fetchColumn();
+            if ($sampleLinhaId) {
+                $pairLinha = $this->findSequentialPairLinha($sampleLinhaId);
+                if ($pairLinha) {
+                    $pairDiscId = (int)$pairLinha['disciplina_id'];
+                    $stmt->execute([
+                        ':docente_id'    => $docenteId,
+                        ':conf'          => $conf,
+                        ':plano_id'      => $planoId,
+                        ':disciplina_id' => $pairDiscId
+                    ]);
+                    $affectedCount += $stmt->rowCount();
+                    $pairNome = $pairLinha['disciplina_nome'];
+                }
+            }
+        }
+
+        return [
+            'success'        => true,
+            'affected_count' => $affectedCount,
+            'pair_nome'      => $pairNome
+        ];
     }
 
     /**

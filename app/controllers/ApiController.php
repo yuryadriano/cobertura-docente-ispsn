@@ -237,10 +237,32 @@ class ApiController {
         if ($res) {
             // Retornar a linha atualizada para o JS actualizar apenas em memória
             $linhaAtualizada = $this->planoModel->getLinhaById($linhaId);
+            $pairLinhaAtualizada = null;
+            $pairNome = null;
+
+            // Se for alteração de docente e solicitada propagação sequencial (Semestre 1 -> Semestre 2)
+            if (array_key_exists('docente_id', $input) && !empty($input['propagate_sequential'])) {
+                $pairLinha = $this->planoModel->findSequentialPairLinha($linhaId);
+                if ($pairLinha) {
+                    $pairLinhaId = (int)$pairLinha['linha_id'];
+                    $pairData = [
+                        'docente_id'   => $input['docente_id'],
+                        'conformidade' => $linhaAtualizada['conformidade'] ?? 'Por verificar',
+                        'regime'       => $linhaAtualizada['regime'] ?? 'Tempo Parcial',
+                        'parecer'      => $linhaAtualizada['parecer'] ?? 'Manter'
+                    ];
+                    $this->planoModel->updateLinha($pairLinhaId, $pairData);
+                    $pairLinhaAtualizada = $this->planoModel->getLinhaById($pairLinhaId);
+                    $pairNome = $pairLinha['disciplina_nome'];
+                }
+            }
+
             Response::json([
-                'success' => true,
-                'message' => 'Linha atualizada com sucesso.',
-                'linha'   => $linhaAtualizada
+                'success'    => true,
+                'message'    => 'Linha atualizada com sucesso.',
+                'linha'      => $linhaAtualizada,
+                'pair_linha' => $pairLinhaAtualizada,
+                'pair_nome'  => $pairNome
             ]);
         } else {
             Response::error('Falha ao atualizar linha.');
@@ -262,8 +284,17 @@ class ApiController {
         }
 
         $res = $this->planoModel->applyDocenteToAllTurmasSameYear($planoId, $disciplinaId, $docenteId);
-        if ($res) {
-            Response::success('Docente atribuído a esta disciplina em todas as turmas do ano!');
+        if ($res && !empty($res['success'])) {
+            $msg = 'Docente atribuído a todas as turmas do ano com sucesso!';
+            if (!empty($res['pair_nome'])) {
+                $msg .= ' Sincronizado também com ' . $res['pair_nome'] . '.';
+            }
+            Response::json([
+                'success'        => true,
+                'message'        => $msg,
+                'affected_count' => $res['affected_count'] ?? 1,
+                'pair_nome'      => $res['pair_nome'] ?? null
+            ]);
         } else {
             Response::error('Falha ao replicar docente nas turmas.');
         }
