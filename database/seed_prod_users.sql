@@ -25,7 +25,7 @@ VALUES
 ('Deoladeu Joaquim Ferramenta', 'deuladeu.ferramenta@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%história%' LIMIT 1), 1),
 ('Domingos João Pedro Bernardo', 'domingos.bernardo@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%fisioterapia%' LIMIT 1), 1),
 ('Fernando Macedo', 'fernando.macedo@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%direito%' LIMIT 1), 1),
-('Isata Gomes Cabaça', 'isata.cabaca@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%recursos humanos%' LIMIT 1), 1),
+('Isata Gomes Cabaça', 'isata.cabaca@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE UPPER(codigo) = 'GRH' OR UPPER(nome) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' OR LOWER(nome) LIKE '%grh%' ORDER BY (UPPER(nome) = 'GRH') DESC LIMIT 1), 1),
 ('João Miguel Catombela', 'joao.miguel@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%economia%' LIMIT 1), 1),
 ('Jorge Alberto Montane', 'jorge.montane@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%psicologia%' LIMIT 1), 1),
 ('Maria de Fátima Luis Falso Kessongo', 'maria.falso@ispsn.org', NULL, 'coordenador', NULL, 1),
@@ -33,7 +33,7 @@ VALUES
 ('Nelson Garcia Sungo', 'nelson.sungo@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%contabilidade%' LIMIT 1), 1),
 ('Sebastião Gonçalo Joaquim', 'sebastao.joaquim@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%sociologia%' LIMIT 1), 1),
 ('Silvia Catarina Adolfo Chitangua', 'silvia.chitangua@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%cardiopneumologia%' LIMIT 1), 1),
-('Valeriano Mangandi', 'valeriano.mangandi@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE LOWER(nome) LIKE '%relações internacionais%' LIMIT 1), 1)
+('Valeriano Mangandi', 'valeriano.mangandi@ispsn.org', NULL, 'coordenador', (SELECT id FROM cursos WHERE UPPER(codigo) = 'CPRI' OR UPPER(nome) = 'CPRI' OR LOWER(nome) LIKE '%relações internacionais%' LIMIT 1), 1)
 ON DUPLICATE KEY UPDATE 
 nome = VALUES(nome), 
 perfil = 'coordenador', 

@@ -140,7 +140,7 @@ class CursoModel {
                     creditos = :cred
                 WHERE id = :id AND curso_id = :curso_id
             ");
-            return $stmt->execute([
+            $res = $stmt->execute([
                 ':nome'     => $nome,
                 ':ano'      => $ano,
                 ':sem'      => $semestre,
@@ -154,7 +154,7 @@ class CursoModel {
                 INSERT INTO disciplinas (curso_id, nome, ano_curricular, semestre, carga_horaria_semanal, creditos, activo)
                 VALUES (:curso_id, :nome, :ano, :sem, :carga, :cred, 1)
             ");
-            return $stmt->execute([
+            $res = $stmt->execute([
                 ':curso_id' => $cursoId,
                 ':nome'     => $nome,
                 ':ano'      => $ano,
@@ -163,5 +163,22 @@ class CursoModel {
                 ':cred'     => $creditos
             ]);
         }
+
+        if ($res) {
+            try {
+                require_once __DIR__ . '/PlanoModel.php';
+                $planoModel = new PlanoModel();
+                $stmtPlanos = $this->db->prepare("SELECT id FROM planos_cobertura WHERE curso_id = ?");
+                $stmtPlanos->execute([$cursoId]);
+                $planos = $stmtPlanos->fetchAll();
+                foreach ($planos as $p) {
+                    $planoModel->ensureLinhasCompletas((int)$p['id']);
+                }
+            } catch (\Throwable $e) {
+                // Silenciar exceção auxiliar
+            }
+        }
+
+        return (bool)$res;
     }
 }

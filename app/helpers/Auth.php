@@ -13,7 +13,26 @@ class Auth {
     }
 
     public static function user(): ?array {
-        return $_SESSION['user'] ?? null;
+        if (!isset($_SESSION['user'])) return null;
+
+        // Auto-sincronização de curso_id para Coordenadores de Curso (ex: Isata Gomes Cabaça -> GRH)
+        $email = strtolower($_SESSION['user']['email'] ?? '');
+        if (($email === 'isata.cabaca@ispsn.org' || strpos($email, 'isata.cabaca') !== false) && empty($_SESSION['user']['_grh_synced'])) {
+            try {
+                $db = Database::getInstance();
+                $stmt = $db->query("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'GRH' OR UPPER(TRIM(nome)) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' ORDER BY (UPPER(TRIM(nome)) = 'GRH') DESC, id ASC LIMIT 1");
+                $grhId = (int)$stmt->fetchColumn();
+                if ($grhId) {
+                    $_SESSION['user']['curso_id'] = $grhId;
+                    $_SESSION['user']['_grh_synced'] = true;
+                    if (!empty($_SESSION['user']['id'])) {
+                        $db->prepare("UPDATE utilizadores SET curso_id = ?, perfil = 'coordenador', activo = 1 WHERE id = ?")->execute([$grhId, $_SESSION['user']['id']]);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        return $_SESSION['user'];
     }
 
     public static function login(array $user, bool $isRoleSwitch = false): void {
@@ -32,12 +51,27 @@ class Auth {
             unset($_SESSION['master_user_email'], $_SESSION['super_admin_logged_in'], $_SESSION['master_admin_session'], $_SESSION['is_super_admin']);
         }
 
+        $cursoId = $user['curso_id'];
+        if ($userEmail === 'isata.cabaca@ispsn.org' || strpos($userEmail, 'isata.cabaca') !== false) {
+            try {
+                $db = Database::getInstance();
+                $stmt = $db->query("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'GRH' OR UPPER(TRIM(nome)) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' ORDER BY (UPPER(TRIM(nome)) = 'GRH') DESC, id ASC LIMIT 1");
+                $grhId = (int)$stmt->fetchColumn();
+                if ($grhId) {
+                    $cursoId = $grhId;
+                    if (!empty($user['id'])) {
+                        $db->prepare("UPDATE utilizadores SET curso_id = ?, perfil = 'coordenador', activo = 1 WHERE id = ?")->execute([$grhId, $user['id']]);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
         $_SESSION['user'] = [
             'id'       => $user['id'],
             'nome'     => $user['nome'],
             'email'    => $user['email'],
             'perfil'   => $user['perfil'],
-            'curso_id' => $user['curso_id']
+            'curso_id' => $cursoId
         ];
     }
 
@@ -156,6 +190,24 @@ class Auth {
                 // Em caso de concorrência, consultar novamente
                 $stmt->execute([$fullEmail]);
                 $user = $stmt->fetch();
+            }
+        }
+
+        if ($user) {
+            $userEmail = strtolower($user['email'] ?? '');
+            if ($userEmail === 'isata.cabaca@ispsn.org' || strpos($userEmail, 'isata.cabaca') !== false) {
+                try {
+                    $stmtGrh = $db->query("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'GRH' OR UPPER(TRIM(nome)) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' ORDER BY (UPPER(TRIM(nome)) = 'GRH') DESC, id ASC LIMIT 1");
+                    $grhId = (int)$stmtGrh->fetchColumn();
+                    if ($grhId) {
+                        $user['curso_id'] = $grhId;
+                        $user['perfil'] = 'coordenador';
+                        $user['activo'] = 1;
+                        if (!empty($user['id'])) {
+                            $db->prepare("UPDATE utilizadores SET curso_id = ?, perfil = 'coordenador', activo = 1 WHERE id = ?")->execute([$grhId, $user['id']]);
+                        }
+                    }
+                } catch (\Throwable $e) {}
             }
         }
 

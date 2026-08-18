@@ -47,7 +47,7 @@ try {
         ['nome' => 'Deoladeu Joaquim Ferramenta', 'curso' => 'História', 'email' => 'deuladeu.ferramenta@ispsn.org'],
         ['nome' => 'Domingos João Pedro Bernardo', 'curso' => 'Fisioterapia', 'email' => 'domingos.bernardo@ispsn.org'],
         ['nome' => 'Fernando Macedo', 'curso' => 'Direito', 'email' => 'fernando.macedo@ispsn.org'],
-        ['nome' => 'Isata Gomes Cabaça', 'curso' => 'Gestão de Recursos Humanos', 'email' => 'isata.cabaca@ispsn.org'],
+        ['nome' => 'Isata Gomes Cabaça', 'curso' => 'GRH', 'email' => 'isata.cabaca@ispsn.org'],
         ['nome' => 'João Miguel Catombela', 'curso' => 'Economia', 'email' => 'joao.miguel@ispsn.org'],
         ['nome' => 'Jorge Alberto Montane', 'curso' => 'Psicologia e Didáctica', 'email' => 'jorge.montane@ispsn.org'],
         ['nome' => 'Maria de Fátima Luis Falso Kessongo', 'curso' => 'Coordenadora do Regime B', 'email' => 'maria.falso@ispsn.org'],
@@ -55,7 +55,7 @@ try {
         ['nome' => 'Nelson Garcia Sungo', 'curso' => 'Contabilidade e Finanças', 'email' => 'nelson.sungo@ispsn.org'],
         ['nome' => 'Sebastião Gonçalo Joaquim', 'curso' => 'Sociologia', 'email' => 'sebastao.joaquim@ispsn.org'],
         ['nome' => 'Silvia Catarina Adolfo Chitangua', 'curso' => 'Cardiopneumologia', 'email' => 'silvia.chitangua@ispsn.org'],
-        ['nome' => 'Valeriano Mangandi', 'curso' => 'Ciências Políticas e Relações Internacionais', 'email' => 'valeriano.mangandi@ispsn.org']
+        ['nome' => 'Valeriano Mangandi', 'curso' => 'CPRI', 'email' => 'valeriano.mangandi@ispsn.org']
     ];
 
     foreach ($coordenadores as $c) {
@@ -64,8 +64,8 @@ try {
         $cursoNome = trim($c['curso']);
 
         // Garantir curso na tabela cursos
-        $stmtCurso = $db->prepare("SELECT id FROM cursos WHERE LOWER(nome) LIKE ? OR nome LIKE ? LIMIT 1");
-        $stmtCurso->execute(["%{$cursoNome}%", "%{$cursoNome}%"]);
+        $stmtCurso = $db->prepare("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = UPPER(?) OR UPPER(TRIM(nome)) = UPPER(?) OR LOWER(nome) LIKE ? OR nome LIKE ? ORDER BY (UPPER(TRIM(nome)) = UPPER(?)) DESC LIMIT 1");
+        $stmtCurso->execute([$cursoNome, $cursoNome, "%{$cursoNome}%", "%{$cursoNome}%", $cursoNome]);
         $cursoObj = $stmtCurso->fetch();
 
         if ($cursoObj) {

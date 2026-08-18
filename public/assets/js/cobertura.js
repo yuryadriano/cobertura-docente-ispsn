@@ -299,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const sem1 = turmaLinhas.filter(l => isSem1(l.semestre));
         const sem2 = turmaLinhas.filter(l => isSem2(l.semestre));
+        const outrosSem = turmaLinhas.filter(l => !isSem1(l.semestre) && !isSem2(l.semestre));
 
         let html = '';
         let rowCounter = 1;
@@ -306,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderGroup = (linhasGroup, semTitle) => {
             if (linhasGroup.length === 0) return '';
-            let out = `<tr class="semhd"><td colspan="12">${semTitle}</td></tr>`;
+            let out = `<tr class="semhd"><td colspan="14">${semTitle}</td></tr>`;
 
             linhasGroup.forEach(l => {
                 const doc = docentesMap[l.docente_id] || (l.docente_nome ? docentesMap[l.docente_nome] : null);
@@ -398,6 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         html += renderGroup(sem1, 'I.º / 1º Semestre');
         html += renderGroup(sem2, 'II.º / 2º Semestre');
+        if (outrosSem.length > 0) {
+            html += renderGroup(outrosSem, 'Disciplinas Anuais / Outros Regimes');
+        }
 
         tbodyLinhas.innerHTML = html;
     }

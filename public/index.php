@@ -242,6 +242,7 @@ switch ($page) {
         // Limpar utilizadores de teste fictícios da base de dados e assegurar conta do Super Admin David Boio
         $db->exec("DELETE FROM utilizadores WHERE email IN ('bernardo.domingos@ispsn.org', 'maria.eugenia@ispsn.org', 'joao.silva@ispsn.org', 'antonio.costa@ispsn.org', 'manuel.ferreira@ispsn.org')");
         $db->exec("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES ('David Boio', 'david.boio@ispsn.org', NULL, 'admin', NULL, 1) ON DUPLICATE KEY UPDATE perfil = 'admin', activo = 1");
+        $db->exec("UPDATE utilizadores SET curso_id = (SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'GRH' OR UPPER(TRIM(nome)) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' ORDER BY (UPPER(TRIM(nome)) = 'GRH') DESC, id ASC LIMIT 1), perfil = 'coordenador', activo = 1 WHERE LOWER(email) = 'isata.cabaca@ispsn.org'");
         
         // Assegurar colunas e VIEW SQL do novo workflow de aprovação em 2 etapas
         try {
