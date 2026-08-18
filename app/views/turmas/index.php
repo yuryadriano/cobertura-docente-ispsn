@@ -130,25 +130,65 @@ window.CURRENT_USER_CURSO_ID = <?= $userCursoId ? (int)$userCursoId : 'null' ?>;
 window.TODAS_TURMAS = [];
 
 window.formatTurmaRotulo = (t) => {
-    const cod = t.designacao || '';
-    const turno = t.turno || 'Manhã';
+    const rawCod = t.designacao || '';
+    const rawTurno = t.turno || '';
+    let s = String(rawCod).trim();
+
+    // 1. Detectar turno
+    let turno = rawTurno.trim();
+    let icon = '🟡';
+    let badgeClass = 'turno-manha';
+
+    if (/Pós-Laboral|Pos-Laboral/i.test(s) || /TURMA-\d+P/i.test(s)) {
+        turno = 'Pós-Laboral';
+        icon = '🟣';
+        badgeClass = 'turno-regimeb';
+    } else if (/Regime\s*B|\-RB|RB/i.test(s)) {
+        turno = 'Regime B';
+        icon = '🟣';
+        badgeClass = 'turno-regimeb';
+    } else if (/Noite|NT/i.test(s) || /TURMA-\d+N/i.test(s)) {
+        turno = 'Noite';
+        icon = '🔵';
+        badgeClass = 'turno-noite';
+    } else if (/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i.test(s)) {
+        turno = 'Tarde';
+        icon = '🟠';
+        badgeClass = 'turno-tarde';
+    } else {
+        turno = 'Manhã';
+        icon = '🟡';
+        badgeClass = 'turno-manha';
+    }
+
+    // 2. Extrair código oficial limpo
+    let codOficial = '';
+    const codeMatch = s.match(/\(([A-Za-z0-9\-_]+)\)/);
+    if (codeMatch && !/Manh[aã]|Tarde|Noite|P[oó]s/i.test(codeMatch[1])) {
+        codOficial = codeMatch[1];
+    } else {
+        codOficial = s.replace(/\s*\([^)]*\)/g, '').trim();
+    }
+
+    // 3. Extrair letra da turma
     let letra = '';
-    const match = cod.match(/(?:[0-9]|RB[0-9]?)([A-Z])$/i);
-    if (match) {
-        letra = match[1].toUpperCase();
+    const turmaLetraMatch = s.match(/Turma\s+([A-Z])/i);
+    if (turmaLetraMatch) {
+        letra = turmaLetraMatch[1].toUpperCase();
+    } else {
+        const letterSuffixMatch = codOficial.match(/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i);
+        if (letterSuffixMatch) {
+            const l = letterSuffixMatch[1].toUpperCase();
+            if (['M', 'T', 'N', 'P'].includes(l) && codOficial.startsWith('TURMA-')) {
+                letra = 'A';
+            } else {
+                letra = l;
+            }
+        }
     }
+
     const labelLetra = letra ? `Turma ${letra}` : `Turma Única`;
-    
-    if (cod.includes('-RB') || cod.includes('RB')) {
-        return { nome: labelLetra, tag: 'Regime B', icon: '🟣', badgeClass: 'turno-regimeb' };
-    }
-    if (turno === 'Tarde' || cod.includes('1T') || cod.includes('2T') || cod.includes('3T')) {
-        return { nome: labelLetra, tag: 'Tarde', icon: '🟠', badgeClass: 'turno-tarde' };
-    }
-    if (turno === 'Noite' || cod.includes('NT')) {
-        return { nome: labelLetra, tag: 'Noite', icon: '🔵', badgeClass: 'turno-noite' };
-    }
-    return { nome: labelLetra, tag: 'Manhã', icon: '🟡', badgeClass: 'turno-manha' };
+    return { nome: labelLetra, tag: turno, icon: icon, badgeClass: badgeClass, codOficial: codOficial || s };
 };
 
 window.carregarTurmas = async (cursoId) => {
@@ -246,7 +286,7 @@ window.renderizarTurmas = (anoFiltro) => {
                         <span class="badge-turno ${rotulo.badgeClass}">${rotulo.icon} ${rotulo.tag}</span>
                     </div>
                     <div style="font-size:11px; color:var(--mut); font-weight:600;">
-                        ${t.ano_curricular}.º Ano · <code style="font-size:10.5px; background:#f0eeea; padding:1px 5px; border-radius:4px; font-weight:700; color:#333;">${t.designacao}</code> · Semestre ${t.semestre}
+                        ${t.ano_curricular}.º Ano · <code style="font-size:10.5px; background:#f0eeea; padding:1px 5px; border-radius:4px; font-weight:700; color:#333;">${rotulo.codOficial}</code> · Semestre ${t.semestre}
                     </div>
                 </td>
                 <td style="padding:10px 12px;"><b>${t.disciplina_nome}</b></td>

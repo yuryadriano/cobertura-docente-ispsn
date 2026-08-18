@@ -131,19 +131,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function formatTurmaRotulo(cod, turno, ano) {
-        if (!cod) return 'Turma';
+    function formatTurmaRotulo(rawCod, rawTurno, ano) {
+        if (!rawCod) return 'Turma';
+        let s = String(rawCod).trim();
+
+        // 1. Detectar turno real a partir do texto ou do parâmetro
+        let turno = (rawTurno || '').trim();
+        if (/Pós-Laboral|Pos-Laboral/i.test(s) || /TURMA-\d+P/i.test(s)) {
+            turno = 'Pós-Laboral';
+        } else if (/Regime\s*B|\-RB|RB/i.test(s)) {
+            turno = 'Regime B';
+        } else if (/Noite|NT/i.test(s) || /TURMA-\d+N/i.test(s)) {
+            turno = 'Noite';
+        } else if (/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i.test(s)) {
+            turno = 'Tarde';
+        } else if (/Manh[aã]|\bM\b|1M|2M|3M|4M|5M|TURMA-\d+M/i.test(s)) {
+            turno = 'Manhã';
+        }
+        if (!turno) turno = 'Manhã';
+
+        // 2. Extrair código limpo entre parênteses ou a sigla principal (ex.: ENF1MA, DIR-RB1MA, TURMA-1M)
+        let codOficial = '';
+        const codeMatch = s.match(/\(([A-Za-z0-9\-_]+)\)/);
+        if (codeMatch && !/Manh[aã]|Tarde|Noite|P[oó]s/i.test(codeMatch[1])) {
+            codOficial = codeMatch[1];
+        } else {
+            codOficial = s.replace(/\s*\([^)]*\)/g, '').trim();
+        }
+
+        // 3. Extrair letra da turma (A, B, C, D, E, F, G, H, I...)
         let letra = '';
-        const match = cod.match(/(?:[0-9]|RB[0-9]?)([A-Z])$/i);
-        if (match) {
-            letra = match[1].toUpperCase();
+        const turmaLetraMatch = s.match(/Turma\s+([A-Z])/i);
+        if (turmaLetraMatch) {
+            letra = turmaLetraMatch[1].toUpperCase();
+        } else {
+            const letterSuffixMatch = codOficial.match(/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i);
+            if (letterSuffixMatch) {
+                const l = letterSuffixMatch[1].toUpperCase();
+                if (['M', 'T', 'N', 'P'].includes(l) && codOficial.startsWith('TURMA-')) {
+                    letra = 'A';
+                } else {
+                    letra = l;
+                }
+            }
         }
-        const turnoLabel = turno || 'Manhã';
-        const labelLetra = letra ? `Turma ${letra}` : `Turma Única`;
-        if (cod.includes('-RB') || cod.includes('RB')) {
-            return `${labelLetra} · Regime B (${cod})`;
-        }
-        return `${labelLetra} · ${turnoLabel} (${cod})`;
+
+        const rotuloTurma = letra ? `Turma ${letra}` : `Turma Única`;
+        return `${rotuloTurma} · ${turno} (${codOficial || s})`;
     }
 
     function populateTurmaSelect() {

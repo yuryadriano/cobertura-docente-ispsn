@@ -280,16 +280,44 @@ $pctConf = $totalUC ? round(($confSimCount / $totalUC) * 100) : 0;
         <tr>
           <td style="text-align:center; font-weight:700; color:#666;"><?= $idx++ ?></td>
           <?php 
-            $turmaCod = $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A');
-            $turno = $l['turno'] ?? 'Manhã';
-            preg_match('/(?:[0-9]|RB[0-9]?)([A-Z])$/i', $turmaCod, $matches);
-            $letra = !empty($matches[1]) ? strtoupper($matches[1]) : '';
+            $rawCod = $l['turma_nome'] ?? ('TURMA-' . $l['ano_curricular'] . 'A');
+            $rawTurno = $l['turno'] ?? '';
+            $s = trim((string)$rawCod);
+
+            // 1. Detectar turno
+            if (preg_match('/Pós-Laboral|Pos-Laboral|TURMA-\d+P/i', $s)) {
+                $turnoTag = 'Pós-Laboral';
+            } elseif (preg_match('/Regime\s*B|\-RB|RB/i', $s)) {
+                $turnoTag = 'Regime B';
+            } elseif (preg_match('/Noite|NT|TURMA-\d+N/i', $s)) {
+                $turnoTag = 'Noite';
+            } elseif (preg_match('/Tarde|\bT\b|1T|2T|3T|4T|5T|TURMA-\d+T/i', $s)) {
+                $turnoTag = 'Tarde';
+            } else {
+                $turnoTag = !empty($rawTurno) ? $rawTurno : 'Manhã';
+            }
+
+            // 2. Extrair código oficial limpo
+            if (preg_match('/\(([A-Za-z0-9\-_]+)\)/', $s, $cm) && !preg_match('/Manh[aã]|Tarde|Noite|P[oó]s/i', $cm[1])) {
+                $codOficial = $cm[1];
+            } else {
+                $codOficial = trim(preg_replace('/\s*\([^)]*\)/', '', $s));
+            }
+
+            // 3. Extrair letra da turma
+            if (preg_match('/Turma\s+([A-Z])/i', $s, $lm)) {
+                $letra = strtoupper($lm[1]);
+            } elseif (preg_match('/(?:[0-9]|RB[0-9]?|TURMA-\d+)([A-Z])$/i', $codOficial, $lm)) {
+                $letra = (in_array(strtoupper($lm[1]), ['M','T','N','P']) && str_starts_with($codOficial, 'TURMA-')) ? 'A' : strtoupper($lm[1]);
+            } else {
+                $letra = '';
+            }
+
             $labelLetra = $letra ? "Turma {$letra}" : "Turma Única";
-            $turnoTag = (strpos($turmaCod, 'RB') !== false) ? 'Regime B' : $turno;
           ?>
           <td>
-            <div style="font-weight:700; font-size:11px; color:#1F4E79;"><?= $labelLetra ?> (<?= htmlspecialchars($turnoTag) ?>)</div>
-            <div style="font-size:9.5px; color:#666; font-family:monospace;"><?= htmlspecialchars($turmaCod) ?></div>
+            <div style="font-weight:700; font-size:11px; color:#1F4E79;"><?= $labelLetra ?> · <?= htmlspecialchars($turnoTag) ?></div>
+            <div style="font-size:9.5px; color:#666; font-family:monospace;"><?= htmlspecialchars($codOficial ?: $s) ?></div>
           </td>
           <td style="text-align:center;"><?= $l['ano_curricular'] ?>.º</td>
           <td style="text-align:center;"><?= htmlspecialchars($l['semestre']) ?></td>
