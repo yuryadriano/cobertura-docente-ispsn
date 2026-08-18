@@ -299,23 +299,44 @@ try {
     }
     echo "   [OK] Total de Turmas Canónicas: {$totalTurmasDefinidas}\n\n";
 
-    // 2. Carregar Snapshot de Atribuições Salvas (Fase 1)
+    // 2. Carregar Snapshot de Atribuições Salvas (Fase 1 / Resgate de Produção)
     $backupDir = __DIR__ . '/backups';
-    $files = glob("{$backupDir}/assignments_safety_snapshot_*.json");
-    rsort($files);
-    $savedAssignments = [];
-    if (!empty($files)) {
-        $latestSnapshot = $files[0];
-        $json = json_decode(file_get_contents($latestSnapshot), true);
-        if ($json && isset($json['linhas'])) {
-            foreach ($json['linhas'] as $l) {
-                if (!empty($l['docente_id'])) {
-                    $discId = (int)$l['disciplina_id'];
-                    $savedAssignments[$discId] = $l;
+    $savedAssignmentsByDisc = [];
+    $savedAssignmentsByTurma = [];
+
+    // Tentar carregar assignments_safety_snapshot_recovered.json primeiro
+    $snapshotFiles = [
+        "{$backupDir}/assignments_safety_snapshot_recovered.json",
+        "c:/xampp/htdocs/sftcoordenacao/database/backups/assignments_safety_snapshot_recovered.json"
+    ];
+    $otherFiles = glob("{$backupDir}/assignments_safety_snapshot_*.json");
+    if (!empty($otherFiles)) {
+        rsort($otherFiles);
+        $snapshotFiles = array_merge($snapshotFiles, $otherFiles);
+    }
+
+    foreach ($snapshotFiles as $sf) {
+        if (file_exists($sf)) {
+            $json = json_decode(file_get_contents($sf), true);
+            $rows = $json['linhas'] ?? (is_array($json) ? $json : []);
+            if (!empty($rows)) {
+                foreach ($rows as $l) {
+                    if (!empty($l['docente_id'])) {
+                        $discId = (int)($l['disciplina_id'] ?? 0);
+                        $tId = (string)($l['turma_id'] ?? '');
+                        if ($discId > 0) {
+                            $savedAssignmentsByDisc[$discId] = $l;
+                            if ($tId) {
+                                $prefix = explode('-D', $tId)[0];
+                                $savedAssignmentsByTurma[$discId][$prefix] = $l;
+                            }
+                        }
+                    }
                 }
+                echo "2. Atribuições docentes resgatadas do snapshot ({$sf}): " . count($savedAssignmentsByDisc) . " disciplinas (" . count($rows) . " registros)\n\n";
+                break;
             }
         }
-        echo "2. Atribuições docentes resgatadas do snapshot de segurança: " . count($savedAssignments) . "\n\n";
     }
 
     echo "========================================================================\n";
@@ -404,7 +425,7 @@ try {
                     $discId = (int)$disc['id'];
                     $turmaRowId = "{$turmaCode}-D{$discId}";
 
-                    // Atribuição de docente preservada
+                    // Atribuição de docente preservada do resgate
                     $docenteId = null;
                     $conf = 'Por verificar';
                     $just = null;
@@ -413,10 +434,17 @@ try {
                     $decisao = 'Aprovar';
                     $obs = null;
 
-                    // Se tínhamos atribuição prévia para esta disciplina e for a Turma A ou primária
-                    if (isset($savedAssignments[$discId])) {
-                        $saved = $savedAssignments[$discId];
-                        $docenteId = $saved['docente_id'];
+                    // Prioridade 1: Atribuição exata para esta turma
+                    $saved = null;
+                    if (isset($savedAssignmentsByTurma[$discId][$turmaCode])) {
+                        $saved = $savedAssignmentsByTurma[$discId][$turmaCode];
+                    } elseif (isset($savedAssignmentsByDisc[$discId])) {
+                        // Fallback: Atribuição da disciplina
+                        $saved = $savedAssignmentsByDisc[$discId];
+                    }
+
+                    if ($saved) {
+                        $docenteId = (int)$saved['docente_id'];
                         $conf = $saved['conformidade'] ?: 'Sim';
                         $just = $saved['justificacao'] ?: 'Preservado do histórico institucional';
                         $regime = $saved['regime'] ?: 'Tempo Parcial';
@@ -519,7 +547,7 @@ try {
     echo "• Total de Turmas Únicas Ativas: {$totalTurmasDefinidas}\n";
     echo "• Total de Instâncias de Turmas: {$totalTurmasCriadas}\n";
     echo "• Total de Linhas no Plano 2026/27: {$totalLinhasCriadas}\n";
-    echo "• Atribuições Docentes Mantidas: " . count($savedAssignments) . "\n\n";
+    echo "• Atribuições Docentes Mantidas: " . count($savedAssignmentsByDisc) . "\n\n";
 
 } catch (\Throwable $e) {
     if (isset($db) && $db->inTransaction()) {
