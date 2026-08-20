@@ -212,14 +212,15 @@ class IntegracaoModel {
     }
 
     /**
-     * Sincroniza em lote a lista de docentes vindos do Gestão Escolar (UPSERT Seguro)
+     * Sincroniza em lote a lista de docentes vindos do Gestão Escolar (UPSERT Seguro com Documentos)
      */
     public function syncDocentes(array $docentesList): array {
         $stats = [
-            'total'       => count($docentesList),
-            'inseridos'   => 0,
-            'atualizados' => 0,
-            'erros'       => []
+            'total'                   => count($docentesList),
+            'inseridos'               => 0,
+            'atualizados'             => 0,
+            'documentos_sincronizados'=> 0,
+            'erros'                   => []
         ];
 
         if (empty($docentesList)) {
@@ -247,6 +248,35 @@ class IntegracaoModel {
                 WHERE id = :id
             ");
 
+            // Statements para sincronização de documentos do RH
+            $stmtDocCheck = $this->db->prepare("SELECT id FROM documentos_docentes WHERE docente_id = ? AND tipo = ? LIMIT 1");
+            $stmtDocInsert = $this->db->prepare("INSERT INTO documentos_docentes (docente_id, tipo, caminho_ficheiro, estado, validade) VALUES (?, ?, ?, ?, ?)");
+            $stmtDocUpdate = $this->db->prepare("UPDATE documentos_docentes SET caminho_ficheiro = ?, estado = ?, validade = ? WHERE id = ?");
+            $stmtUpdateIna = $this->db->prepare("UPDATE docentes SET tem_inaarees = 'Sim' WHERE id = ?");
+            $stmtUpdatePed = $this->db->prepare("UPDATE docentes SET tem_agregacao_pedag = 'Sim' WHERE id = ?");
+
+            $tipoMap = [
+                'bi'               => 'bi',
+                'bilhete'          => 'bi',
+                'identificacao'    => 'bi',
+                'cv'               => 'cv',
+                'curriculum'       => 'cv',
+                'certificados'     => 'certificados',
+                'certificado'      => 'certificados',
+                'cert'             => 'certificados',
+                'diplomas'         => 'diplomas',
+                'diploma'          => 'diplomas',
+                'dip'              => 'diplomas',
+                'inaarees'         => 'inaarees',
+                'ina'              => 'inaarees',
+                'homologacao'      => 'inaarees',
+                'homologacao_inaarees' => 'inaarees',
+                'agregacao_pedag'  => 'agregacao_pedag',
+                'ped'              => 'agregacao_pedag',
+                'agregacao'        => 'agregacao_pedag',
+                'capacitacao'      => 'agregacao_pedag'
+            ];
+
             foreach ($docentesList as $idx => $d) {
                 $nome = trim($d['nome'] ?? '');
                 $email = trim($d['email'] ?? '');
@@ -269,6 +299,8 @@ class IntegracaoModel {
                 $stmtCheck->execute([$email, $id]);
                 $existingId = $stmtCheck->fetchColumn();
 
+                $targetDocenteId = null;
+
                 if ($existingId) {
                     $stmtUpdate->execute([
                         ':id'            => $existingId,
@@ -282,6 +314,7 @@ class IntegracaoModel {
                         ':prod_cient'    => $prodCient,
                         ':activo'        => $activo
                     ]);
+                    $targetDocenteId = (int)$existingId;
                     $stats['atualizados']++;
                 } else {
                     $stmtInsert->execute([
@@ -297,7 +330,46 @@ class IntegracaoModel {
                         ':prod_cient'    => $prodCient,
                         ':activo'        => $activo
                     ]);
+                    $targetDocenteId = $id ? (int)$id : (int)$this->db->lastInsertId();
                     $stats['inseridos']++;
+                }
+
+                // Sincronizar Documentos do Docente se fornecidos no payload
+                $docsList = $d['documentos'] ?? $d['anexos'] ?? $d['docs'] ?? [];
+                if (is_array($docsList) && !empty($docsList) && $targetDocenteId) {
+                    foreach ($docsList as $doc) {
+                        if (!is_array($doc)) continue;
+
+                        $rawTipo = strtolower(trim($doc['tipo'] ?? ''));
+                        $tipoEnum = $tipoMap[$rawTipo] ?? null;
+                        if (!$tipoEnum) continue;
+
+                        $caminho = trim($doc['url'] ?? $doc['caminho_ficheiro'] ?? $doc['caminho'] ?? $doc['link'] ?? $doc['arquivo'] ?? '');
+                        if (empty($caminho)) continue;
+
+                        $estadoRaw = trim($doc['estado'] ?? 'Válido');
+                        $estado = in_array($estadoRaw, ['Válido', 'Pendente', 'Em falta']) ? $estadoRaw : 'Válido';
+                        $validade = !empty($doc['validade']) ? trim($doc['validade']) : null;
+
+                        $stmtDocCheck->execute([$targetDocenteId, $tipoEnum]);
+                        $existingDocId = $stmtDocCheck->fetchColumn();
+
+                        if ($existingDocId) {
+                            $stmtDocUpdate->execute([$caminho, $estado, $validade, $existingDocId]);
+                        } else {
+                            $stmtDocInsert->execute([$targetDocenteId, $tipoEnum, $caminho, $estado, $validade]);
+                        }
+
+                        if ($estado === 'Válido') {
+                            if ($tipoEnum === 'inaarees') {
+                                $stmtUpdateIna->execute([$targetDocenteId]);
+                            } elseif ($tipoEnum === 'agregacao_pedag') {
+                                $stmtUpdatePed->execute([$targetDocenteId]);
+                            }
+                        }
+
+                        $stats['documentos_sincronizados']++;
+                    }
                 }
             }
 

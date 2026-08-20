@@ -571,6 +571,13 @@ class ApiController {
         }
 
         $rawPath = str_replace('\\', '/', $doc['caminho_ficheiro']);
+        
+        // Se for uma URL remota (sincronizada do RH/Gestão Escolar), redireciona diretamente
+        if (preg_match('#^https?://#i', $rawPath)) {
+            header("Location: " . $rawPath);
+            exit;
+        }
+
         $relPath = ltrim($rawPath, '/');
         $cleanRelPath = preg_replace('#^public/#i', '', $relPath);
         $filename = basename($rawPath);

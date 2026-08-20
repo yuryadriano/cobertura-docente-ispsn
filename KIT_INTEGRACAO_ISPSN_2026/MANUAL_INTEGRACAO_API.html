@@ -100,10 +100,12 @@ Headers:
     <p>Utilizado pelo Gestão Escolar para recolher a matriz oficial e horários homologados (Ex: Fisioterapia = 8).</p>
     <pre><code>GET https://docentes.ispsn.app/index.php?api=v1_integracao_plano_export&curso_id=8&ano=2026/27</code></pre>
 
-    <h3><span class="badge post">POST</span> 3. Sincronização em Lote de Docentes (ERP ➔ Portal)</h3>
+    <h3><span class="badge post">POST</span> 3. Sincronização em Lote de Docentes & Documentos do RH (ERP ➔ Portal)</h3>
     <p><b>Endpoint:</b> <code>?api=v1_integracao_sync_docentes</code></p>
+    <p>Permite sincronizar o cadastro completo dos docentes e todos os seus anexos documentais (BI, CV, Diplomas, Certificados, INAAREES, Agregação Pedagógica) registrados no RH.</p>
     <pre><code>POST https://docentes.ispsn.app/index.php?api=v1_integracao_sync_docentes
 Content-Type: application/json
+Authorization: Bearer ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN
 
 {
   "docentes": [
@@ -116,7 +118,41 @@ Content-Type: application/json
       "tem_inaarees": true,
       "tem_agregacao_pedag": true,
       "categoria_carreira": "Assistente",
-      "activo": 1
+      "anos_experiencia_es": 8,
+      "producao_cientifica_3a": 2,
+      "activo": 1,
+      "documentos": [
+        {
+          "tipo": "bi",
+          "url": "https://gestao.ispsn.app/uploads/rh/1107_bi.pdf",
+          "estado": "Válido"
+        },
+        {
+          "tipo": "diplomas",
+          "url": "https://gestao.ispsn.app/uploads/rh/1107_diploma_mestrado.pdf",
+          "estado": "Válido"
+        },
+        {
+          "tipo": "certificados",
+          "url": "https://gestao.ispsn.app/uploads/rh/1107_certificados.pdf",
+          "estado": "Válido"
+        },
+        {
+          "tipo": "inaarees",
+          "url": "https://gestao.ispsn.app/uploads/rh/1107_homologacao_inaarees.pdf",
+          "estado": "Válido"
+        },
+        {
+          "tipo": "agregacao_pedag",
+          "url": "https://gestao.ispsn.app/uploads/rh/1107_capacitacao_pedag.pdf",
+          "estado": "Válido"
+        },
+        {
+          "tipo": "cv",
+          "url": "https://gestao.ispsn.app/uploads/rh/1107_curriculum_vitae.pdf",
+          "estado": "Válido"
+        }
+      ]
     }
   ]
 }</code></pre>
