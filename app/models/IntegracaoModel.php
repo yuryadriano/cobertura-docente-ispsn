@@ -17,9 +17,13 @@ class IntegracaoModel {
     }
 
     /**
-     * Valida o token Bearer enviado no cabeçalho HTTP Authorization
+     * Valida o token Bearer ou parâmetro GET/POST
      */
-    public function validateToken(?string $authHeader): bool {
+    public function validateToken(?string $authHeader, ?string $queryToken = null): bool {
+        if (!empty($queryToken) && hash_equals($this->apiKey, $queryToken)) {
+            return true;
+        }
+
         if (empty($authHeader)) {
             return false;
         }
@@ -29,7 +33,7 @@ class IntegracaoModel {
             return hash_equals($this->apiKey, $token);
         }
 
-        return false;
+        return hash_equals($this->apiKey, trim($authHeader));
     }
 
     /**
@@ -114,6 +118,31 @@ class IntegracaoModel {
             'total_linhas' => count($linhas),
             'atribuicoes'  => $linhas
         ];
+    }
+
+    /**
+     * Exporta os dados oficiais de TODOS OS CURSOS DE UMA VEZ (Global Export)
+     */
+    public function getPlanoExportTodos(string $anoLectivo = '2026/27'): array {
+        $stmtCursos = $this->db->query("SELECT id, codigo, nome, grau, duracao_anos FROM cursos WHERE activo = 1 ORDER BY nome ASC");
+        $cursos = $stmtCursos->fetchAll(PDO::FETCH_ASSOC);
+
+        $resultado = [
+            'ano_lectivo'   => $anoLectivo,
+            'total_cursos'  => count($cursos),
+            'total_linhas'  => 0,
+            'cursos_planos' => []
+        ];
+
+        foreach ($cursos as $c) {
+            $exportCurso = $this->getPlanoExportData((int)$c['id'], $anoLectivo);
+            if ($exportCurso) {
+                $resultado['total_linhas'] += $exportCurso['total_linhas'];
+                $resultado['cursos_planos'][] = $exportCurso;
+            }
+        }
+
+        return $resultado;
     }
 
     /**

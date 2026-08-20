@@ -51,6 +51,9 @@ class ApiController {
             case 'v1_integracao_plano_export':
                 $this->integracaoPlanoExport();
                 break;
+            case 'v1_integracao_plano_export_todos':
+                $this->integracaoPlanoExportTodos();
+                break;
             case 'v1_integracao_sync_docentes':
                 $this->integracaoSyncDocentes();
                 break;
@@ -1371,16 +1374,17 @@ class ApiController {
      * Validação centralizada de autorização de serviço
      */
     private function checkIntegrationAuth(): bool {
-        $headers = function_exists('getallheaders') ? getallheaders() : [];
-        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-
-        // Permitir também utilizadores com perfil 'admin' autenticados na sessão web
-        if (Auth::check() && Auth::user()['perfil'] === 'admin') {
+        // 1. Permitir utilizadores autenticados na sessão web
+        if (Auth::check()) {
             return true;
         }
 
-        if (!$this->integracaoModel->validateToken($authHeader)) {
-            Response::error('Acesso não autorizado. Token de serviço inválido ou ausente.', 401);
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        $queryToken = $_GET['token'] ?? $_GET['api_key'] ?? $_POST['token'] ?? null;
+
+        if (!$this->integracaoModel->validateToken($authHeader, $queryToken)) {
+            Response::error('Acesso não autorizado. Token de serviço inválido ou ausente. Use Authorization: Bearer <TOKEN> ou envie ?token=<TOKEN> na URL.', 401);
             return false;
         }
 
@@ -1486,6 +1490,34 @@ class ApiController {
         $this->integracaoModel->logSyncEvent('v1_integracao_plano_export', 'GET', 200, $export['total_linhas'], $elapsed, [
             'curso_id' => $cursoId,
             'ano'      => $ano
+        ]);
+
+        Response::json([
+            'success' => true,
+            'meta' => [
+                'timestamp'       => date('c'),
+                'tempo_ms'        => $elapsed,
+                'versao_contrato' => 'v1.0'
+            ],
+            'data' => $export
+        ]);
+    }
+
+    /**
+     * GET ?api=v1_integracao_plano_export_todos&ano=2026/27
+     * Exporta TODOS os cursos e matrizes do ISPSN de uma só vez
+     */
+    private function integracaoPlanoExportTodos(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $ano = trim($_GET['ano'] ?? $_GET['ano_lectivo'] ?? '2026/27');
+        $export = $this->integracaoModel->getPlanoExportTodos($ano);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_plano_export_todos', 'GET', 200, $export['total_linhas'], $elapsed, [
+            'ano'          => $ano,
+            'total_cursos' => $export['total_cursos']
         ]);
 
         Response::json([
