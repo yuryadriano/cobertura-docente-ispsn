@@ -10,6 +10,7 @@ require_once __DIR__ . '/../helpers/Notification.php';
 require_once __DIR__ . '/../models/DocenteModel.php';
 require_once __DIR__ . '/../models/CursoModel.php';
 require_once __DIR__ . '/../models/PlanoModel.php';
+require_once __DIR__ . '/../models/IntegracaoModel.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -23,15 +24,33 @@ class ApiController {
     private DocenteModel $docenteModel;
     private CursoModel $cursoModel;
     private PlanoModel $planoModel;
+    private IntegracaoModel $integracaoModel;
 
     public function __construct() {
-        $this->docenteModel = new DocenteModel();
-        $this->cursoModel   = new CursoModel();
-        $this->planoModel   = new PlanoModel();
+        $this->docenteModel   = new DocenteModel();
+        $this->cursoModel     = new CursoModel();
+        $this->planoModel     = new PlanoModel();
+        $this->integracaoModel = new IntegracaoModel();
     }
 
     public function handleRequest(string $action): void {
         switch ($action) {
+            // Endpoints de Integração Enterprise (Gestão Escolar ↔ Cobertura)
+            case 'v1_integracao_status':
+                $this->integracaoStatus();
+                break;
+            case 'v1_integracao_plano_export':
+                $this->integracaoPlanoExport();
+                break;
+            case 'v1_integracao_sync_docentes':
+                $this->integracaoSyncDocentes();
+                break;
+            case 'v1_integracao_sync_metricas':
+                $this->integracaoSyncMetricas();
+                break;
+            case 'v1_integracao_logs':
+                $this->integracaoLogs();
+                break;
             case 'docentes':
                 $this->getDocentes();
                 break;
@@ -1334,5 +1353,171 @@ class ApiController {
             Response::error('Falha ao guardar disciplina.');
         }
     }
+
+    // ========================================================================
+    // ENDPOINTS DA API DE INTEGRAÇÃO V1 (GESTAO ESCOLAR ↔ COBERTURA DOCENTE)
+    // ========================================================================
+
+    /**
+     * Validação centralizada de autorização de serviço
+     */
+    private function checkIntegrationAuth(): bool {
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+
+        // Permitir também utilizadores com perfil 'admin' autenticados na sessão web
+        if (Auth::check() && Auth::user()['perfil'] === 'admin') {
+            return true;
+        }
+
+        if (!$this->integracaoModel->validateToken($authHeader)) {
+            Response::error('Acesso não autorizado. Token de serviço inválido ou ausente.', 401);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * GET ?api=v1_integracao_status
+     */
+    private function integracaoStatus(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $status = $this->integracaoModel->getIntegrationStatus();
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_status', 'GET', 200, 1, $elapsed, ['status' => 'OK']);
+        Response::json(['success' => true, 'data' => $status]);
+    }
+
+    /**
+     * GET ?api=v1_integracao_plano_export&curso_id=X&ano=2026/27
+     */
+    private function integracaoPlanoExport(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $cursoId = (int)($_GET['curso_id'] ?? 0);
+        $ano = trim($_GET['ano'] ?? $_GET['ano_lectivo'] ?? '2026/27');
+
+        if (!$cursoId) {
+            Response::error('Parâmetro obrigatório "curso_id" não fornecido.', 400);
+            return;
+        }
+
+        $export = $this->integracaoModel->getPlanoExportData($cursoId, $ano);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        if (!$export) {
+            $this->integracaoModel->logSyncEvent('v1_integracao_plano_export', 'GET', 404, 0, $elapsed, ['error' => 'Curso não encontrado']);
+            Response::error('Curso não encontrado.', 404);
+            return;
+        }
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_plano_export', 'GET', 200, $export['total_linhas'], $elapsed, [
+            'curso_id' => $cursoId,
+            'ano'      => $ano
+        ]);
+
+        Response::json([
+            'success' => true,
+            'meta' => [
+                'timestamp'       => date('c'),
+                'tempo_ms'        => $elapsed,
+                'versao_contrato' => 'v1.0'
+            ],
+            'data' => $export
+        ]);
+    }
+
+    /**
+     * POST ?api=v1_integracao_sync_docentes
+     */
+    private function integracaoSyncDocentes(): void {
+        $start = microtime(true);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Response::error('Método HTTP inválido. Use POST.', 405);
+            return;
+        }
+
+        if (!$this->checkIntegrationAuth()) return;
+
+        $payload = json_decode(file_get_contents('php://input'), true);
+        $docentes = $payload['docentes'] ?? $payload;
+
+        if (!is_array($docentes)) {
+            Response::error('Payload inválido. Esperada lista de docentes em formato JSON.', 400);
+            return;
+        }
+
+        $result = $this->integracaoModel->syncDocentes($docentes);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $status = empty($result['erros']) ? 200 : 207;
+        $this->integracaoModel->logSyncEvent('v1_integracao_sync_docentes', 'POST', $status, $result['inseridos'] + $result['atualizados'], $elapsed, $result);
+
+        Response::json([
+            'success' => empty($result['erros']),
+            'meta' => [
+                'timestamp' => date('c'),
+                'tempo_ms'  => $elapsed
+            ],
+            'data' => $result
+        ], $status);
+    }
+
+    /**
+     * POST ?api=v1_integracao_sync_metricas
+     */
+    private function integracaoSyncMetricas(): void {
+        $start = microtime(true);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            Response::error('Método HTTP inválido. Use POST.', 405);
+            return;
+        }
+
+        if (!$this->checkIntegrationAuth()) return;
+
+        $payload = json_decode(file_get_contents('php://input'), true);
+        $metricas = $payload['metricas'] ?? $payload;
+
+        if (!is_array($metricas)) {
+            Response::error('Payload inválido. Esperada lista de métricas por turma em formato JSON.', 400);
+            return;
+        }
+
+        $result = $this->integracaoModel->syncMetricasOperacionais($metricas);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $status = empty($result['erros']) ? 200 : 207;
+        $this->integracaoModel->logSyncEvent('v1_integracao_sync_metricas', 'POST', $status, $result['atualizados'], $elapsed, $result);
+
+        Response::json([
+            'success' => empty($result['erros']),
+            'meta' => [
+                'timestamp' => date('c'),
+                'tempo_ms'  => $elapsed
+            ],
+            'data' => $result
+        ], $status);
+    }
+
+    /**
+     * GET ?api=v1_integracao_logs
+     */
+    private function integracaoLogs(): void {
+        if (!$this->checkIntegrationAuth()) return;
+
+        $limit = (int)($_GET['limit'] ?? 50);
+        $logs = $this->integracaoModel->getRecentSyncLogs(min($limit, 100));
+
+        Response::json([
+            'success' => true,
+            'data'    => $logs
+        ]);
+    }
 }
+
 

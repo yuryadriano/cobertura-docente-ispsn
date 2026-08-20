@@ -1,0 +1,42 @@
+========================================================================
+             KIT DE INTEGRAÇÃO & SINCRONIZAÇÃO — ISPSN 2026/27
+       Módulo de Cobertura Docente ↔ Sistema de Gestão Escolar
+========================================================================
+
+Este pacote contém toda a documentação, coleção Postman e scripts de 
+exemplo prontos a usar para a equipa de desenvolvimento do Gestão Escolar.
+
+------------------------------------------------------------------------
+ESTRUTURA DO PACOTE:
+------------------------------------------------------------------------
+1. MANUAL_INTEGRACAO_API.md
+   -> Especificação técnica completa de todos os endpoints REST, 
+      autenticação, payloads JSON e códigos de erro.
+
+2. MANUAL_INTEGRACAO_API.html
+   -> Versão visual formatada e estilizada pronta a abrir no browser 
+      ou imprimir em PDF.
+
+3. postman/ISPSN_Cobertura_Docente_API.postman_collection.json
+   -> Coleção Postman pronta a importar no Postman para testar todos 
+      os endpoints com 1 clique.
+
+4. exemplos/exemplo_exportar_plano.php
+   -> Script PHP funcional para ler e importar a matriz curricular e 
+      docentes aprovados.
+
+5. exemplos/exemplo_sincronizar_docentes.php
+   -> Script PHP funcional para enviar docentes do ERP para o portal.
+
+6. exemplos/exemplo_sincronizar_metricas.php
+   -> Script PHP funcional para enviar sumários e notas para o portal.
+
+7. exemplos/exemplo_integracao.js
+   -> Exemplo completo em JavaScript / Node.js.
+
+------------------------------------------------------------------------
+CREDENCIAS DE AUTENTICAÇÃO PADRÃO:
+------------------------------------------------------------------------
+Header: Authorization: Bearer ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN
+URL Base: https://docentes.ispsn.app/index.php
+------------------------------------------------------------------------
