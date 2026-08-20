@@ -77,6 +77,18 @@
     <h1>🚀 Testador Visual da API de Integração (ISPSN 2026/27)</h1>
     <p>Clique em qualquer botão abaixo para testar os dados reais da API:</p>
 
+    <div class="api-key-banner" style="background: linear-gradient(135deg, #1E293B, #0F172A); color: white; padding: 18px 22px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #27AE60;">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94A3B8; font-weight: 700; margin-bottom: 6px;">🔑 CHAVE DE AUTENTICAÇÃO DA API (TOKEN DE SERVIÇO)</div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="text" id="api-token-input" value="ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN" style="flex: 1; min-width: 320px; background: #334155; border: 1px solid #475569; color: #38BDF8; font-family: monospace; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;">
+            <button onclick="copiarToken()" style="background: #27AE60; padding: 10px 16px; font-size: 13px;">📋 Copiar Chave</button>
+            <button onclick="restaurarTokenPadrao()" style="background: #475569; padding: 10px 14px; font-size: 12px;">Restaurar Padrão</button>
+        </div>
+        <div style="margin-top: 8px; font-size: 12px; color: #CBD5E1;">
+            <b>Header HTTP:</b> <code style="color: #4ADE80; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">Authorization: Bearer <span id="lbl-bearer-preview">ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN</span></code>
+        </div>
+    </div>
+
     <div class="btn-group">
         <button class="purple" onclick="testarEndpoint('v1_integracao_plano_export_todos&ano=2026/27')">🌟 1. Exportar TODOS OS CURSOS (Global)</button>
         <button onclick="testarEndpoint('v1_integracao_status')">2. Status Geral da API</button>
@@ -98,8 +110,26 @@
 </div>
 
 <script>
+const TOKEN_PADRAO = 'ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN';
+
+function copiarToken() {
+    const input = document.getElementById('api-token-input');
+    navigator.clipboard.writeText(input.value.trim()).then(() => {
+        alert('Chave copiada para a área de transferência:\n' + input.value.trim());
+    });
+}
+
+function restaurarTokenPadrao() {
+    document.getElementById('api-token-input').value = TOKEN_PADRAO;
+    document.getElementById('lbl-bearer-preview').textContent = TOKEN_PADRAO;
+}
+
+document.getElementById('api-token-input').addEventListener('input', function(e) {
+    document.getElementById('lbl-bearer-preview').textContent = e.target.value.trim() || 'TOKEN_VAZIO';
+});
+
 async function testarEndpoint(apiAction) {
-    const token = 'ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN';
+    const token = document.getElementById('api-token-input').value.trim() || TOKEN_PADRAO;
     // Testa primeiro no host atual (local ou producao) com token na URL
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const baseUrl = isLocal ? 'http://localhost/sftcoordenacao/public/index.php' : 'https://docentes.ispsn.app/index.php';
