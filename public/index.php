@@ -292,6 +292,14 @@ switch ($page) {
         require_once __DIR__ . '/../app/views/cobertura/relatorio.php';
         break;
 
+    case 'api_tester':
+        require_once __DIR__ . '/KIT_INTEGRACAO_ISPSN_2026/testador_api.html';
+        break;
+
+    case 'api_docs':
+        require_once __DIR__ . '/KIT_INTEGRACAO_ISPSN_2026/MANUAL_INTEGRACAO_API.html';
+        break;
+
     default:
         header('Location: index.php?page=painel');
         exit;

@@ -1,0 +1,123 @@
+{
+  "info": {
+    "_postman_id": "ispsn-cobertura-api-2026",
+    "name": "ISPSN — API de Integração e Sincronização (Cobertura Docente)",
+    "description": "Coleção oficial de endpoints para integração com o Sistema de Gestão Escolar",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Healthcheck e Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "https://docentes.ispsn.app/index.php?api=v1_integracao_status",
+          "protocol": "https",
+          "host": ["docentes", "ispsn", "app"],
+          "path": ["index.php"],
+          "query": [
+            { "key": "api", "value": "v1_integracao_status" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Exportar Matriz Homologada (Fisioterapia)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "https://docentes.ispsn.app/index.php?api=v1_integracao_plano_export&curso_id=8&ano=2026/27",
+          "protocol": "https",
+          "host": ["docentes", "ispsn", "app"],
+          "path": ["index.php"],
+          "query": [
+            { "key": "api", "value": "v1_integracao_plano_export" },
+            { "key": "curso_id", "value": "8" },
+            { "key": "ano", "value": "2026/27" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Sincronizar Docentes (ERP -> Cobertura)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"docentes\": [\n    {\n      \"id\": 1107,\n      \"nome\": \"Abel Hossi Chissingui\",\n      \"email\": \"abel.chissingui@ispsn.org\",\n      \"grau_academico\": \"Mestre\",\n      \"especialidade\": \"Fisioterapia Respiratória\",\n      \"tem_inaarees\": true,\n      \"tem_agregacao_pedag\": true,\n      \"categoria_carreira\": \"Assistente\",\n      \"anos_experiencia_es\": 6,\n      \"producao_cientifica_3a\": 2,\n      \"activo\": 1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "https://docentes.ispsn.app/index.php?api=v1_integracao_sync_docentes",
+          "protocol": "https",
+          "host": ["docentes", "ispsn", "app"],
+          "path": ["index.php"],
+          "query": [
+            { "key": "api", "value": "v1_integracao_sync_docentes" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Sincronizar Métricas Operacionais (Sumários/Notas)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"metricas\": [\n    {\n      \"turma_id\": \"FISIO3MA-D1232\",\n      \"sumarios_registados\": 160,\n      \"sumarios_previstos\": 200,\n      \"programa_carregado\": 1,\n      \"dosificacao_carregada\": 1,\n      \"notas_no_prazo\": \"Sim\",\n      \"inquerito_media\": 4.75\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "https://docentes.ispsn.app/index.php?api=v1_integracao_sync_metricas",
+          "protocol": "https",
+          "host": ["docentes", "ispsn", "app"],
+          "path": ["index.php"],
+          "query": [
+            { "key": "api", "value": "v1_integracao_sync_metricas" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Consultar Logs de Auditoria",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "https://docentes.ispsn.app/index.php?api=v1_integracao_logs&limit=50",
+          "protocol": "https",
+          "host": ["docentes", "ispsn", "app"],
+          "path": ["index.php"],
+          "query": [
+            { "key": "api", "value": "v1_integracao_logs" },
+            { "key": "limit", "value": "50" }
+          ]
+        }
+      }
+    }
+  ]
+}

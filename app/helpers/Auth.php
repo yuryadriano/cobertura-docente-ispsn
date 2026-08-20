@@ -439,6 +439,8 @@ class Auth {
         $userRole = $_SESSION['user']['perfil'] ?? '';
         if ($userRole === 'admin') return true;
 
+        if (in_array($page, ['api_tester', 'api_docs', 'relatorio_plano'])) return true;
+
         $info = self::roleInfo();
         return in_array($page, $info['nav']);
     }

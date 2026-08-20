@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testador Visual da API — ISPSN 2026</title>
+    <style>
+        :root {
+            --primary: #1F4E79;
+            --accent: #27AE60;
+            --purple: #8E44AD;
+            --bg: #F1F5F9;
+            --card: #FFFFFF;
+            --border: #CBD5E1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            padding: 30px;
+            color: #1E293B;
+        }
+        .wrap {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        h1 { color: var(--primary); margin-top: 0; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button.green { background: var(--accent); }
+        button.purple { background: var(--purple); font-size: 14px; }
+        .meta-box {
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        pre {
+            background: #0F172A;
+            color: #38BDF8;
+            padding: 18px;
+            border-radius: 8px;
+            max-height: 520px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .badge.ok { background: #DCFCE7; color: #166534; }
+        .badge.load { background: #FEF3C7; color: #92400E; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>🚀 Testador Visual da API de Integração (ISPSN 2026/27)</h1>
+    <p>Clique em qualquer botão abaixo para testar os dados reais da API:</p>
+
+    <div class="btn-group">
+        <button class="purple" onclick="testarEndpoint('v1_integracao_plano_export_todos&ano=2026/27')">🌟 1. Exportar TODOS OS CURSOS (Global)</button>
+        <button onclick="testarEndpoint('v1_integracao_status')">2. Status Geral da API</button>
+        <button onclick="testarEndpoint('v1_integracao_cursos')">3. Listar Todos os Cursos (IDs)</button>
+        <button onclick="testarEndpoint('v1_integracao_disciplinas')">4. Listar Todas as Disciplinas (IDs)</button>
+        <button onclick="testarEndpoint('v1_integracao_docentes')">5. Listar Todos os Docentes (IDs)</button>
+        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=8&ano=2026/27')">6. Matriz Fisioterapia (ID 8)</button>
+        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=7&ano=2026/27')">7. Matriz Enfermagem (ID 7)</button>
+        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=5&ano=2026/27')">8. Matriz Direito (ID 5)</button>
+    </div>
+
+    <div class="meta-box">
+        <b>URL Testada:</b> <span id="url-label" style="font-family:monospace; color:#0284C7;">(Nenhum teste executado)</span><br>
+        <b>Tempo de Resposta:</b> <span id="time-label">—</span> | 
+        <b>Estado:</b> <span id="status-badge" class="badge ok">Pronto</span>
+    </div>
+
+    <pre id="output-json">// Os dados JSON retornados pela API aparecerão aqui...</pre>
+</div>
+
+<script>
+async function testarEndpoint(apiAction) {
+    const token = 'ISPSN_INTEGRATION_KEY_2026_SECRET_TOKEN';
+    // Testa primeiro no host atual (local ou producao) com token na URL
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const baseUrl = isLocal ? 'http://localhost/sftcoordenacao/public/index.php' : 'https://docentes.ispsn.app/index.php';
+    const fullUrl = `${baseUrl}?api=${apiAction}&token=${token}`;
+
+    const urlLabel = document.getElementById('url-label');
+    const timeLabel = document.getElementById('time-label');
+    const statusBadge = document.getElementById('status-badge');
+    const outputJson = document.getElementById('output-json');
+
+    urlLabel.textContent = fullUrl;
+    statusBadge.textContent = 'Aguardando resposta...';
+    statusBadge.className = 'badge load';
+    outputJson.textContent = 'Carregando dados da API...';
+
+    const startTime = performance.now();
+    try {
+        const res = await fetch(fullUrl, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        });
+        const elapsed = Math.round(performance.now() - startTime);
+        timeLabel.textContent = `${elapsed} ms`;
+
+        const data = await res.json();
+        statusBadge.textContent = `HTTP ${res.status} ${res.statusText || 'OK'}`;
+        statusBadge.className = res.ok ? 'badge ok' : 'badge';
+
+        outputJson.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+        timeLabel.textContent = 'Falha';
+        statusBadge.textContent = 'Erro de Rede';
+        outputJson.textContent = 'Erro ao conectar à API: ' + err.message;
+    }
+}
+</script>
+</body>
+</html>
