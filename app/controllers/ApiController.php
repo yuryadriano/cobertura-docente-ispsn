@@ -39,6 +39,15 @@ class ApiController {
             case 'v1_integracao_status':
                 $this->integracaoStatus();
                 break;
+            case 'v1_integracao_cursos':
+                $this->integracaoCursos();
+                break;
+            case 'v1_integracao_disciplinas':
+                $this->integracaoDisciplinas();
+                break;
+            case 'v1_integracao_docentes':
+                $this->integracaoDocentes();
+                break;
             case 'v1_integracao_plano_export':
                 $this->integracaoPlanoExport();
                 break;
@@ -1390,6 +1399,64 @@ class ApiController {
 
         $this->integracaoModel->logSyncEvent('v1_integracao_status', 'GET', 200, 1, $elapsed, ['status' => 'OK']);
         Response::json(['success' => true, 'data' => $status]);
+    }
+
+    /**
+     * GET ?api=v1_integracao_cursos
+     * Retorna todos os cursos com seus IDs e Códigos para mapeamento
+     */
+    private function integracaoCursos(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $cursos = $this->integracaoModel->getCursosList();
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_cursos', 'GET', 200, count($cursos), $elapsed, ['total' => count($cursos)]);
+        Response::json([
+            'success' => true,
+            'meta'    => ['total' => count($cursos), 'tempo_ms' => $elapsed],
+            'data'    => $cursos
+        ]);
+    }
+
+    /**
+     * GET ?api=v1_integracao_disciplinas&curso_id=X
+     * Retorna todas as disciplinas com disciplina_id, curso_id, ano_curricular e semestre
+     */
+    private function integracaoDisciplinas(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $cursoId = isset($_GET['curso_id']) ? (int)$_GET['curso_id'] : null;
+        $disciplinas = $this->integracaoModel->getDisciplinasList($cursoId);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_disciplinas', 'GET', 200, count($disciplinas), $elapsed, ['curso_id' => $cursoId, 'total' => count($disciplinas)]);
+        Response::json([
+            'success' => true,
+            'meta'    => ['total' => count($disciplinas), 'curso_id' => $cursoId, 'tempo_ms' => $elapsed],
+            'data'    => $disciplinas
+        ]);
+    }
+
+    /**
+     * GET ?api=v1_integracao_docentes
+     * Retorna todos os docentes cadastrados com docente_id e dados regulatórios
+     */
+    private function integracaoDocentes(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $docentes = $this->integracaoModel->getDocentesList();
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_docentes', 'GET', 200, count($docentes), $elapsed, ['total' => count($docentes)]);
+        Response::json([
+            'success' => true,
+            'meta'    => ['total' => count($docentes), 'tempo_ms' => $elapsed],
+            'data'    => $docentes
+        ]);
     }
 
     /**

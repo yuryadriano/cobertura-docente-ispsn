@@ -65,34 +65,44 @@ class IntegracaoModel {
 
         $stmtLinhas = $this->db->prepare("
             SELECT 
-                linha_id,
-                disciplina_id,
-                disciplina_nome,
-                ano_curricular,
-                semestre,
-                carga_horaria_semanal,
-                creditos,
-                turma_id,
-                turma_nome,
-                docente_id,
-                docente_nome,
-                docente_grau,
-                docente_especialidade,
-                docente_inaarees,
-                conformidade,
-                regime,
-                categoria_carreira,
-                parecer,
-                decisao_aprovacao,
-                sumarios_registados,
-                sumarios_previstos,
-                programa_carregado,
-                dosificacao_carregada,
-                notas_no_prazo,
-                inquerito_media
-            FROM vw_linhas_cobertura_detalhada
-            WHERE plano_id = ?
-            ORDER BY ano_curricular ASC, semestre ASC, disciplina_id ASC, id ASC
+                lc.id AS linha_id,
+                pc.curso_id,
+                lc.plano_id,
+                lc.disciplina_id,
+                d.codigo AS disciplina_codigo,
+                d.nome AS disciplina_nome,
+                d.ano_curricular,
+                d.semestre,
+                d.carga_horaria_semanal,
+                d.creditos,
+                lc.turma_id,
+                t.designacao AS turma_nome,
+                SUBSTRING_INDEX(t.id, '-D', 1) AS turma_codigo,
+                lc.docente_id,
+                doc.nome AS docente_nome,
+                doc.email AS docente_email,
+                doc.grau_academico AS docente_grau,
+                doc.especialidade AS docente_especialidade,
+                doc.tem_inaarees AS docente_inaarees,
+                doc.tem_agregacao_pedag AS docente_agregacao,
+                lc.conformidade,
+                lc.regime,
+                lc.categoria_carreira,
+                lc.parecer,
+                COALESCE(lc.decisao_aprovacao, 'Aprovar') AS decisao_aprovacao,
+                t.sumarios_registados,
+                t.sumarios_previstos,
+                t.programa_carregado,
+                t.dosificacao_carregada,
+                t.notas_no_prazo,
+                t.inquerito_media
+            FROM linhas_cobertura lc
+            JOIN planos_cobertura pc ON lc.plano_id = pc.id
+            JOIN disciplinas d ON lc.disciplina_id = d.id
+            LEFT JOIN turmas t ON lc.turma_id = t.id
+            LEFT JOIN docentes doc ON lc.docente_id = doc.id
+            WHERE lc.plano_id = ?
+            ORDER BY d.ano_curricular ASC, d.semestre ASC, d.id ASC, lc.id ASC
         ");
         $stmtLinhas->execute([$plano['id']]);
         $linhas = $stmtLinhas->fetchAll(PDO::FETCH_ASSOC);
@@ -104,6 +114,72 @@ class IntegracaoModel {
             'total_linhas' => count($linhas),
             'atribuicoes'  => $linhas
         ];
+    }
+
+    /**
+     * Retorna lista completa de Cursos com seus IDs e Códigos
+     */
+    public function getCursosList(): array {
+        $stmt = $this->db->query("
+            SELECT id AS curso_id, codigo AS curso_codigo, nome AS curso_nome, grau, duracao_anos, activo
+            FROM cursos
+            ORDER BY nome ASC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Retorna lista completa de Disciplinas com IDs para comparação
+     */
+    public function getDisciplinasList(?int $cursoId = null): array {
+        $sql = "
+            SELECT 
+                d.id AS disciplina_id,
+                d.curso_id,
+                c.codigo AS curso_codigo,
+                c.nome AS curso_nome,
+                d.codigo AS disciplina_codigo,
+                d.nome AS disciplina_nome,
+                d.ano_curricular,
+                d.semestre,
+                d.carga_horaria_semanal,
+                d.creditos,
+                d.activo
+            FROM disciplinas d
+            JOIN cursos c ON d.curso_id = c.id
+        ";
+        if ($cursoId) {
+            $sql .= " WHERE d.curso_id = ? ORDER BY d.ano_curricular ASC, d.semestre ASC, d.id ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$cursoId]);
+        } else {
+            $sql .= " ORDER BY c.nome ASC, d.ano_curricular ASC, d.semestre ASC, d.id ASC";
+            $stmt = $this->db->query($sql);
+        }
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Retorna lista completa de Docentes com IDs para comparação
+     */
+    public function getDocentesList(): array {
+        $stmt = $this->db->query("
+            SELECT 
+                id AS docente_id,
+                nome AS docente_nome,
+                email AS docente_email,
+                grau_academico,
+                especialidade,
+                tem_inaarees,
+                tem_agregacao_pedag,
+                categoria_carreira,
+                anos_experiencia_es,
+                producao_cientifica_3a,
+                activo
+            FROM docentes
+            ORDER BY nome ASC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
