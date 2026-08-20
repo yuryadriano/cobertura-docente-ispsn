@@ -337,28 +337,39 @@ try {
             $planoId = (int)$db->lastInsertId();
         }
 
-        // Garantir que as 14 disciplinas oficiais do 3.º Ano de Fisioterapia estão cadastradas
+        // Substituição completa das disciplinas do 3.º Ano de Fisioterapia
         if ($cursoCod === 'FISI') {
             $fisi3 = [
                 // Iº Semestre
-                ['nome' => 'Fisioterapia Dermatofuncional', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
-                ['nome' => 'Recursos Naturais em Fisioterapia', 'sem' => 'I', 'carga' => 3, 'cred' => 3],
-                ['nome' => 'Fisioterapia Aplicada ao Trabalho', 'sem' => 'I', 'carga' => 3, 'cred' => 3],
-                ['nome' => 'Fisioterapia em Reumatologia', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
-                ['nome' => 'Fisioterapia em Saúde Pública', 'sem' => 'I', 'carga' => 3, 'cred' => 3],
-                ['nome' => 'Fisioterapia em Ortopedia e Traumatologia I', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
-                ['nome' => 'Fisioterapia Respiratória', 'sem' => 'I', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia Dermatofuncional',              'sem' => 'I',  'carga' => 4, 'cred' => 4],
+                ['nome' => 'Recursos Naturais em Fisioterapia',          'sem' => 'I',  'carga' => 3, 'cred' => 3],
+                ['nome' => 'Fisioterapia Aplicada ao Trabalho',          'sem' => 'I',  'carga' => 3, 'cred' => 3],
+                ['nome' => 'Fisioterapia em Reumatologia',               'sem' => 'I',  'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia em Saúde Pública',              'sem' => 'I',  'carga' => 3, 'cred' => 3],
+                ['nome' => 'Fisioterapia em Ortopedia e Traumatologia I','sem' => 'I',  'carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisioterapia Respiratória',                  'sem' => 'I',  'carga' => 4, 'cred' => 4],
                 // IIº Semestre
-                ['nome' => 'Metodologia de Investigação Científica', 'sem' => 'II', 'carga' => 3, 'cred' => 3],
-                ['nome' => 'Fisioterapia em Cardiologia', 'sem' => 'II', 'carga' => 4, 'cred' => 4],
-                ['nome' => 'Deontologia e Bioética Profissional', 'sem' => 'II', 'carga' => 2, 'cred' => 2],
-                ['nome' => 'Bioestatística', 'sem' => 'II', 'carga' => 3, 'cred' => 3],
-                ['nome' => 'Fisioterapia em Ortopedia e Traumatologia II', 'sem' => 'II', 'carga' => 4, 'cred' => 4],
-                ['nome' => 'Fisiopatologia', 'sem' => 'II', 'carga' => 3, 'cred' => 3],
-                ['nome' => 'Eletro, Termo, Fototerapia', 'sem' => 'II', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Metodologia de Investigação Científica',     'sem' => 'II', 'carga' => 3, 'cred' => 3],
+                ['nome' => 'Fisioterapia em Cardiologia',                'sem' => 'II', 'carga' => 4, 'cred' => 4],
+                ['nome' => 'Deontologia e Bioética Profissional',        'sem' => 'II', 'carga' => 2, 'cred' => 2],
+                ['nome' => 'Bioestatística',                             'sem' => 'II', 'carga' => 3, 'cred' => 3],
+                ['nome' => 'Fisioterapia em Ortopedia e Traumatologia II','sem' => 'II','carga' => 4, 'cred' => 4],
+                ['nome' => 'Fisiopatologia',                             'sem' => 'II', 'carga' => 3, 'cred' => 3],
+                ['nome' => 'Eletro, Termo, Fototerapia',                 'sem' => 'II', 'carga' => 4, 'cred' => 4],
             ];
+
+            // Apagar TODAS as disciplinas antigas do 3.º Ano de FISI que NÃO estejam na nova lista
+            // (CASCADE irá apagar turmas e linhas_cobertura associadas automaticamente)
+            $novosNomes = array_map(fn($f) => strtolower(trim($f['nome'])), $fisi3);
+            $placeholders = implode(',', array_fill(0, count($novosNomes), '?'));
+            $stmtDelOld = $db->prepare(
+                "DELETE FROM disciplinas WHERE curso_id = ? AND ano_curricular = 3 AND TRIM(LOWER(nome)) NOT IN ({$placeholders})"
+            );
+            $stmtDelOld->execute(array_merge([$cursoId], $novosNomes));
+
+            // Inserir as novas disciplinas caso ainda não existam
             $stmtCheckD = $db->prepare("SELECT id FROM disciplinas WHERE curso_id = ? AND ano_curricular = 3 AND TRIM(LOWER(nome)) = ? LIMIT 1");
-            $stmtInsD = $db->prepare("INSERT INTO disciplinas (curso_id, nome, ano_curricular, semestre, carga_horaria_semanal, creditos, activo) VALUES (?, ?, 3, ?, ?, ?, 1)");
+            $stmtInsD   = $db->prepare("INSERT INTO disciplinas (curso_id, nome, ano_curricular, semestre, carga_horaria_semanal, creditos, activo) VALUES (?, ?, 3, ?, ?, ?, 1)");
             foreach ($fisi3 as $fuc) {
                 $stmtCheckD->execute([$cursoId, strtolower(trim($fuc['nome']))]);
                 if (!$stmtCheckD->fetchColumn()) {
