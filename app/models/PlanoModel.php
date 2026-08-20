@@ -407,7 +407,7 @@ class PlanoModel {
         $stmt = $this->db->prepare("
             SELECT * FROM vw_linhas_cobertura_detalhada
             WHERE plano_id = ?
-            ORDER BY ano_curricular ASC, semestre ASC, disciplina_nome ASC
+            ORDER BY ano_curricular ASC, semestre ASC, disciplina_id ASC, id ASC
         ");
         $stmt->execute([$planoId]);
         return $stmt->fetchAll();
