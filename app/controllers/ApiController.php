@@ -60,6 +60,12 @@ class ApiController {
             case 'v1_integracao_sync_metricas':
                 $this->integracaoSyncMetricas();
                 break;
+            case 'v1_integracao_documentos':
+                $this->integracaoDocumentos();
+                break;
+            case 'v1_integracao_sync_documentos':
+                $this->integracaoSyncDocumentos();
+                break;
             case 'v1_integracao_logs':
                 $this->integracaoLogs();
                 break;
@@ -1623,6 +1629,103 @@ class ApiController {
             'success' => true,
             'data'    => $logs
         ]);
+    }
+
+    /**
+     * GET ?api=v1_integracao_documentos&docente_id=X
+     * Lista documentos registados no Portal com URLs e status para auditoria
+     */
+    private function integracaoDocumentos(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $docenteId = isset($_GET['docente_id']) ? (int)$_GET['docente_id'] : null;
+        $documentos = $this->integracaoModel->getDocumentosList($docenteId);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $this->integracaoModel->logSyncEvent('v1_integracao_documentos', 'GET', 200, count($documentos), $elapsed, [
+            'docente_id' => $docenteId,
+            'total'      => count($documentos)
+        ]);
+
+        Response::json([
+            'success' => true,
+            'meta'    => [
+                'docente_id' => $docenteId,
+                'total'      => count($documentos),
+                'tempo_ms'   => $elapsed
+            ],
+            'data'    => $documentos
+        ]);
+    }
+
+    /**
+     * POST / GET ?api=v1_integracao_sync_documentos
+     * Sincroniza e migra documentos em lote do RH vinculando aos IDs dos docentes
+     */
+    private function integracaoSyncDocumentos(): void {
+        $start = microtime(true);
+        if (!$this->checkIntegrationAuth()) return;
+
+        $rawInput = file_get_contents('php://input');
+        $payload = !empty($rawInput) ? json_decode($rawInput, true) : null;
+        $documentos = $payload['documentos'] ?? $payload;
+
+        // Se for acionado via GET (ex: no testador visual) ou sem payload POST
+        if (empty($documentos) || !is_array($documentos)) {
+            $docsExistentes = $this->integracaoModel->getDocumentosList();
+            $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+            Response::json([
+                'success' => true,
+                'meta' => [
+                    'mensagem' => 'Endpoint de Sincronização de Documentos ativo. Para migração em lote, envie POST JSON com array "documentos".',
+                    'total_documentos_na_base' => count($docsExistentes),
+                    'tempo_ms' => $elapsed
+                ],
+                'data' => [
+                    'exemplo_payload_esperado' => [
+                        'documentos' => [
+                            [
+                                'docente_id' => 1,
+                                'tipo' => 'bi',
+                                'url' => 'https://gestao.ispsn.app/uploads/rh/doc_bi_1.pdf',
+                                'estado' => 'Válido'
+                            ],
+                            [
+                                'docente_id' => 1,
+                                'tipo' => 'diplomas',
+                                'url' => 'https://gestao.ispsn.app/uploads/rh/doc_diploma_1.pdf',
+                                'estado' => 'Válido'
+                            ],
+                            [
+                                'docente_id' => 1,
+                                'tipo' => 'inaarees',
+                                'url' => 'https://gestao.ispsn.app/uploads/rh/doc_inaarees_1.pdf',
+                                'estado' => 'Válido'
+                            ]
+                        ]
+                    ],
+                    'amostra_documentos_registados' => array_slice($docsExistentes, 0, 15)
+                ]
+            ]);
+            return;
+        }
+
+        $result = $this->integracaoModel->syncDocumentosDocentes($documentos);
+        $elapsed = round((microtime(true) - $start) * 1000, 2);
+
+        $status = empty($result['erros']) ? 200 : 207;
+        $this->integracaoModel->logSyncEvent('v1_integracao_sync_documentos', 'POST', $status, $result['inseridos'] + $result['atualizados'], $elapsed, $result);
+
+        Response::json([
+            'success' => empty($result['erros']),
+            'meta' => [
+                'timestamp' => date('c'),
+                'tempo_ms'  => $elapsed
+            ],
+            'data' => $result
+        ], $status);
     }
 }
 

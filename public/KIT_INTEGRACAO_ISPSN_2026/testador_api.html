@@ -95,9 +95,18 @@
         <button onclick="testarEndpoint('v1_integracao_cursos')">3. Listar Todos os Cursos (IDs)</button>
         <button onclick="testarEndpoint('v1_integracao_disciplinas')">4. Listar Todas as Disciplinas (IDs)</button>
         <button onclick="testarEndpoint('v1_integracao_docentes')">5. Listar Todos os Docentes (IDs)</button>
-        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=8&ano=2026/27')">6. Matriz Fisioterapia (ID 8)</button>
-        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=7&ano=2026/27')">7. Matriz Enfermagem (ID 7)</button>
-        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=5&ano=2026/27')">8. Matriz Direito (ID 5)</button>
+        <button style="background: #D97706; font-weight:700;" onclick="testarEndpoint('v1_integracao_documentos')">📁 6. Listar Documentos dos Docentes (Portal)</button>
+        <button style="background: #059669; font-weight:700;" onclick="testarEndpoint('v1_integracao_sync_documentos')">🚀 7. Migrar/Sincronizar Documentos (RH ➔ Portal)</button>
+        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=8&ano=2026/27')">8. Matriz Fisioterapia (ID 8)</button>
+        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=7&ano=2026/27')">9. Matriz Enfermagem (ID 7)</button>
+        <button class="green" onclick="testarEndpoint('v1_integracao_plano_export&curso_id=5&ano=2026/27')">10. Matriz Direito (ID 5)</button>
+    </div>
+
+    <!-- Card Especial de Verificação e Download de Documentos por ID -->
+    <div style="background: #F8FAFC; border: 1px solid var(--border); padding: 16px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span style="font-size: 13px; font-weight: 700; color: var(--primary);">🔍 Inspecionar Documentos de um Docente Específico:</span>
+        <input type="number" id="input-docente-id" placeholder="ID do Docente (ex: 1107)" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 200px;">
+        <button style="background: #0284C7; padding: 8px 16px;" onclick="inspecionarDocentePorId()">Consultar Documentos do Docente</button>
     </div>
 
     <div class="meta-box">
@@ -127,6 +136,15 @@ function restaurarTokenPadrao() {
 document.getElementById('api-token-input').addEventListener('input', function(e) {
     document.getElementById('lbl-bearer-preview').textContent = e.target.value.trim() || 'TOKEN_VAZIO';
 });
+
+function inspecionarDocentePorId() {
+    const docId = document.getElementById('input-docente-id').value.trim();
+    if (!docId) {
+        alert('Por favor, informe o ID do docente para consultar os documentos.');
+        return;
+    }
+    testarEndpoint('v1_integracao_documentos&docente_id=' + encodeURIComponent(docId));
+}
 
 async function testarEndpoint(apiAction) {
     const token = document.getElementById('api-token-input').value.trim() || TOKEN_PADRAO;

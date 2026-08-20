@@ -212,6 +212,37 @@ class IntegracaoModel {
     }
 
     /**
+     * Retorna lista detalhada de documentos de docentes com URLs para auditoria e download
+     */
+    public function getDocumentosList(?int $docenteId = null): array {
+        $sql = "
+            SELECT 
+                doc.id AS documento_id,
+                doc.docente_id,
+                d.nome AS docente_nome,
+                d.email AS docente_email,
+                d.grau_academico,
+                d.especialidade,
+                doc.tipo,
+                doc.caminho_ficheiro,
+                doc.estado,
+                doc.validade,
+                doc.created_at
+            FROM documentos_docentes doc
+            JOIN docentes d ON doc.docente_id = d.id
+        ";
+        if ($docenteId) {
+            $sql .= " WHERE doc.docente_id = ? ORDER BY doc.created_at DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$docenteId]);
+        } else {
+            $sql .= " ORDER BY d.nome ASC, doc.tipo ASC";
+            $stmt = $this->db->query($sql);
+        }
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Sincroniza em lote a lista de docentes vindos do Gestão Escolar (UPSERT Seguro com Documentos)
      */
     public function syncDocentes(array $docentesList): array {
@@ -443,6 +474,124 @@ class IntegracaoModel {
         } catch (\Throwable $e) {
             $this->db->rollBack();
             $stats['erros'][] = "Erro transacional: " . $e->getMessage();
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Sincronização e Migração em Lote de Documentos Docentes (RH ➔ Portal)
+     */
+    public function syncDocumentosDocentes(array $documentosList): array {
+        $stats = [
+            'total'       => count($documentosList),
+            'inseridos'   => 0,
+            'atualizados' => 0,
+            'docentes_afetados' => [],
+            'erros'       => []
+        ];
+
+        if (empty($documentosList)) {
+            return $stats;
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $stmtCheckDocente = $this->db->prepare("SELECT id, nome FROM docentes WHERE id = ? LIMIT 1");
+            $stmtDocCheck     = $this->db->prepare("SELECT id FROM documentos_docentes WHERE docente_id = ? AND tipo = ? LIMIT 1");
+            $stmtDocInsert    = $this->db->prepare("INSERT INTO documentos_docentes (docente_id, tipo, caminho_ficheiro, estado, validade) VALUES (?, ?, ?, ?, ?)");
+            $stmtDocUpdate    = $this->db->prepare("UPDATE documentos_docentes SET caminho_ficheiro = ?, estado = ?, validade = ? WHERE id = ?");
+            $stmtUpdateIna    = $this->db->prepare("UPDATE docentes SET tem_inaarees = 'Sim' WHERE id = ?");
+            $stmtUpdatePed    = $this->db->prepare("UPDATE docentes SET tem_agregacao_pedag = 'Sim' WHERE id = ?");
+
+            $tipoMap = [
+                'bi'               => 'bi',
+                'bilhete'          => 'bi',
+                'identificacao'    => 'bi',
+                'cv'               => 'cv',
+                'curriculum'       => 'cv',
+                'certificados'     => 'certificados',
+                'certificado'      => 'certificados',
+                'cert'             => 'certificados',
+                'diplomas'         => 'diplomas',
+                'diploma'          => 'diplomas',
+                'dip'              => 'diplomas',
+                'inaarees'         => 'inaarees',
+                'ina'              => 'inaarees',
+                'homologacao'      => 'inaarees',
+                'homologacao_inaarees' => 'inaarees',
+                'agregacao_pedag'  => 'agregacao_pedag',
+                'ped'              => 'agregacao_pedag',
+                'agregacao'        => 'agregacao_pedag',
+                'capacitacao'      => 'agregacao_pedag'
+            ];
+
+            $docentesAfetados = [];
+
+            foreach ($documentosList as $idx => $doc) {
+                if (!is_array($doc)) continue;
+
+                $docenteId = (int)($doc['docente_id'] ?? $doc['id_docente'] ?? 0);
+                if (!$docenteId) {
+                    $stats['erros'][] = "Documento #{$idx}: ID do docente não fornecido.";
+                    continue;
+                }
+
+                $stmtCheckDocente->execute([$docenteId]);
+                $docente = $stmtCheckDocente->fetch(PDO::FETCH_ASSOC);
+                if (!$docente) {
+                    $stats['erros'][] = "Documento #{$idx}: Docente ID {$docenteId} não encontrado na base de dados.";
+                    continue;
+                }
+
+                $rawTipo = strtolower(trim($doc['tipo'] ?? ''));
+                $tipoEnum = $tipoMap[$rawTipo] ?? null;
+                if (!$tipoEnum) {
+                    $stats['erros'][] = "Documento #{$idx} (Docente {$docenteId}): Tipo '{$rawTipo}' inválido. Tipos aceites: bi, cv, diplomas, certificados, inaarees, agregacao_pedag.";
+                    continue;
+                }
+
+                $caminho = trim($doc['url'] ?? $doc['caminho_ficheiro'] ?? $doc['caminho'] ?? $doc['link'] ?? $doc['arquivo'] ?? '');
+                if (empty($caminho)) {
+                    $stats['erros'][] = "Documento #{$idx} (Docente {$docenteId}): URL ou caminho do ficheiro é obrigatório.";
+                    continue;
+                }
+
+                $estadoRaw = trim($doc['estado'] ?? 'Válido');
+                $estado = in_array($estadoRaw, ['Válido', 'Pendente', 'Em falta']) ? $estadoRaw : 'Válido';
+                $validade = !empty($doc['validade']) ? trim($doc['validade']) : null;
+
+                $stmtDocCheck->execute([$docenteId, $tipoEnum]);
+                $existingDocId = $stmtDocCheck->fetchColumn();
+
+                if ($existingDocId) {
+                    $stmtDocUpdate->execute([$caminho, $estado, $validade, $existingDocId]);
+                    $stats['atualizados']++;
+                } else {
+                    $stmtDocInsert->execute([$docenteId, $tipoEnum, $caminho, $estado, $validade]);
+                    $stats['inseridos']++;
+                }
+
+                if ($estado === 'Válido') {
+                    if ($tipoEnum === 'inaarees') {
+                        $stmtUpdateIna->execute([$docenteId]);
+                    } elseif ($tipoEnum === 'agregacao_pedag') {
+                        $stmtUpdatePed->execute([$docenteId]);
+                    }
+                }
+
+                if (!in_array($docenteId, $docentesAfetados)) {
+                    $docentesAfetados[] = $docenteId;
+                }
+            }
+
+            $stats['docentes_afetados'] = $docentesAfetados;
+            $stats['total_docentes_impactados'] = count($docentesAfetados);
+
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            $stats['erros'][] = "Erro transacional na migração de documentos: " . $e->getMessage();
         }
 
         return $stats;
