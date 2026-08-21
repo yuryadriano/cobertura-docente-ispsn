@@ -742,32 +742,39 @@ class ApiController {
         }
         $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
         $userId = (int)($input['id'] ?? 0);
-        $perfil = $input['perfil'] ?? 'coordenador';
-        $cursoId = !empty($input['curso_id']) ? (int)$input['curso_id'] : null;
-        $activo = isset($input['activo']) ? (int)$input['activo'] : 1;
-        $nome = !empty($input['nome']) ? trim($input['nome']) : null;
-        $email = !empty($input['email']) ? trim(strtolower($input['email'])) : null;
-
         if (!$userId) {
             Response::error('ID de utilizador inválido.');
         }
 
         $db = Database::getInstance();
+        $resetFeito = false;
+
         if (!empty($input['reset_senha'])) {
             $stmt = $db->prepare("UPDATE utilizadores SET senha_hash = NULL WHERE id = ?");
             $stmt->execute([$userId]);
+            $resetFeito = true;
         }
 
+        $nome = !empty($input['nome']) ? trim($input['nome']) : null;
+        $email = !empty($input['email']) ? trim(strtolower($input['email'])) : null;
+        $res = true;
+
         if ($nome && $email) {
+            $perfil = $input['perfil'] ?? 'coordenador';
+            $cursoId = !empty($input['curso_id']) ? (int)$input['curso_id'] : null;
+            $activo = isset($input['activo']) ? (int)$input['activo'] : 1;
             $stmt = $db->prepare("UPDATE utilizadores SET nome = ?, email = ?, perfil = ?, curso_id = ?, activo = ? WHERE id = ?");
             $res = $stmt->execute([$nome, $email, $perfil, $cursoId, $activo, $userId]);
-        } else {
+        } elseif (isset($input['perfil']) || isset($input['activo']) || isset($input['curso_id'])) {
+            $perfil = $input['perfil'] ?? 'coordenador';
+            $cursoId = !empty($input['curso_id']) ? (int)$input['curso_id'] : null;
+            $activo = isset($input['activo']) ? (int)$input['activo'] : 1;
             $stmt = $db->prepare("UPDATE utilizadores SET perfil = ?, curso_id = ?, activo = ? WHERE id = ?");
             $res = $stmt->execute([$perfil, $cursoId, $activo, $userId]);
         }
 
-        if ($res) {
-            $msg = !empty($input['reset_senha']) ? "Palavra-passe resetada para Primeiro Acesso com sucesso." : "Utilizador atualizado com sucesso.";
+        if ($res || $resetFeito) {
+            $msg = $resetFeito ? "Palavra-passe resetada para Primeiro Acesso com sucesso." : "Utilizador atualizado com sucesso.";
             Response::success($msg);
         } else {
             Response::error('Falha ao atualizar utilizador.');

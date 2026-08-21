@@ -235,7 +235,7 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                         <th style="width:220px;">Curso (Âmbito)</th>
                         <th style="width:90px;">Estado</th>
                         <?php if ($isAdmin): ?>
-                            <th style="width:110px; text-align:center;">Ação</th>
+                            <th style="width:160px; text-align:center;">Ação</th>
                         <?php endif; ?>
                     </tr>
                 </thead>
@@ -275,8 +275,9 @@ $anoActivo = defined('ANO_LECTIVO_ACTIVO') ? ANO_LECTIVO_ACTIVO : '2026/27';
                         <?php if ($isAdmin): ?>
                             <td style="text-align:center;">
                                 <div style="display:flex; gap:4px; justify-content:center;">
-                                    <button class="btn sm btn-ok" style="font-size:11px; padding:4px 8px;" onclick="window.salvarUser(<?= $u['id'] ?>)" title="Guardar Alterações do Utilizador">Guardar</button>
-                                    <button class="btn sm ghost" style="font-size:11px; padding:4px 8px; border-color:var(--line);" onclick="window.alternarEstadoUser(<?= $u['id'] ?>, <?= $u['activo'] ? 0 : 1 ?>)" title="Alternar Estado Ativo/Inativo">⚡</button>
+                                    <button class="btn sm btn-ok" style="font-size:11px; padding:4px 7px;" onclick="window.salvarUser(<?= $u['id'] ?>)" title="Guardar Alterações do Utilizador">Guardar</button>
+                                    <button class="btn sm ghost" style="font-size:11px; padding:4px 6px; border-color:#d97706; color:#d97706; font-weight:700;" onclick="window.resetUserPassword(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['nome'])) ?>')" title="Resetar Palavra-Passe (Voltar a Primeiro Acesso)">🔑 Reset</button>
+                                    <button class="btn sm ghost" style="font-size:11px; padding:4px 6px; border-color:var(--line);" onclick="window.alternarEstadoUser(<?= $u['id'] ?>, <?= $u['activo'] ? 0 : 1 ?>)" title="Alternar Estado Ativo/Inativo">⚡</button>
                                 </div>
                             </td>
                         <?php endif; ?>
@@ -476,6 +477,30 @@ window.sincronizarGestaoEscolar = async () => {
         }
     } catch (err) {
         alert('Erro de comunicação ao sincronizar com o Gestão Escolar.');
+    }
+};
+
+window.resetUserPassword = async (userId, nome) => {
+    if (!confirm(`Tem a certeza que deseja resetar a palavra-passe de "${nome}"?\n\nO utilizador voltará para o estado de "Primeiro Acesso" e poderá definir uma nova palavra-passe diretamente na tela de login.`)) return;
+
+    try {
+        const res = await fetch('index.php?api=utilizador_salvar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: userId,
+                reset_senha: true
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message || 'Palavra-passe resetada com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.error || data.message || 'Falha ao resetar palavra-passe.'));
+        }
+    } catch (err) {
+        alert('Erro ao comunicar com o servidor.');
     }
 };
 
