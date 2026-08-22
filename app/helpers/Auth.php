@@ -104,7 +104,10 @@ class Auth {
             return ['success' => false, 'message' => 'Acesso não autorizado. O seu e-mail ainda não possui um perfil ou área atribuída pelo Administrador.'];
         }
 
-        if (empty($user['activo'])) {
+        $superAdmins = defined('SUPER_ADMIN_EMAILS') ? SUPER_ADMIN_EMAILS : ['evaristo.adriano@ispsn.org', 'david.boio@ispsn.org'];
+        $isSuperAdmin = in_array(strtolower($user['email'] ?? ''), array_map('strtolower', $superAdmins));
+
+        if (!$isSuperAdmin && empty($user['activo'])) {
             if (empty($user['curso_id'])) {
                 return ['success' => false, 'message' => 'Conta criada. Aguarde ativação e atribuição de curso pelo Administrador.'];
             }
@@ -140,6 +143,9 @@ class Auth {
         $email = trim(strtolower($email));
         if (empty($email)) return null;
 
+        $superAdmins = defined('SUPER_ADMIN_EMAILS') ? SUPER_ADMIN_EMAILS : ['evaristo.adriano@ispsn.org', 'david.boio@ispsn.org'];
+        $superAdminsLower = array_map('strtolower', $superAdmins);
+
         // Mapeamento de Aliases e Grafias Institucionais Conhecidas
         $aliasMap = [
             'kianguembeni.canania@ispsn.org' => 'kianguenbeni.canania@ispsn.org',
@@ -149,7 +155,8 @@ class Auth {
             'deuladeu.ferramenta@ispsn.org' => 'deuladeu.ferramenta@ispsn.org',
             'deoladeu.ferramenta@ispsn.org' => 'deuladeu.ferramenta@ispsn.org',
             'sebastiao.joaquim@ispsn.org'   => 'sebastao.joaquim@ispsn.org',
-            'sebastao.joaquim@ispsn.org'    => 'sebastao.joaquim@ispsn.org'
+            'sebastao.joaquim@ispsn.org'    => 'sebastao.joaquim@ispsn.org',
+            'coord.direito@ispsn.org'       => 'fernando.macedo@ispsn.org'
         ];
 
         // Se o utilizador não digitou '@', acrescenta automaticamente '@ispsn.org'
@@ -168,7 +175,7 @@ class Auth {
         $stmt->execute([$fullEmail]);
         $user = $stmt->fetch();
 
-        // 2. Se não encontrar por e-mail exato, tenta por e-mail alternativo / prefixo de e-mail ou nome
+        // 2. Se não encontrar por e-mail exato, tenta por prefixo de e-mail ou nome
         if (!$user) {
             $prefix = explode('@', $email)[0];
             $stmtPrefix = $db->prepare("SELECT * FROM utilizadores WHERE (LOWER(email) LIKE ? OR LOWER(nome) LIKE ?) LIMIT 1");
@@ -176,7 +183,28 @@ class Auth {
             $user = $stmtPrefix->fetch();
         }
 
-        // 3. Auto-provisionar e-mail @ispsn.org não reconhecido como INATIVO e sem curso (curso_id = NULL, activo = 0)
+        // 3. Super Admins têm criação soberana imediata se não existirem
+        if (in_array($fullEmail, $superAdminsLower) || in_array($email, $superAdminsLower)) {
+            $nomeSuper = ($fullEmail === 'evaristo.adriano@ispsn.org') ? 'Evaristo Adriano (Admin)' : 'David Boio (Admin)';
+            if (!$user) {
+                try {
+                    $stmtIns = $db->prepare("INSERT INTO utilizadores (nome, email, senha_hash, perfil, curso_id, activo) VALUES (?, ?, NULL, 'admin', NULL, 1)");
+                    $stmtIns->execute([$nomeSuper, $fullEmail]);
+                    $stmt->execute([$fullEmail]);
+                    $user = $stmt->fetch();
+                } catch (\Throwable $e) {}
+            } else {
+                $user['perfil'] = 'admin';
+                $user['activo'] = 1;
+                $user['curso_id'] = null;
+                try {
+                    $db->prepare("UPDATE utilizadores SET perfil = 'admin', activo = 1, curso_id = NULL WHERE id = ?")->execute([$user['id']]);
+                } catch (\Throwable $e) {}
+            }
+            return $user ?: null;
+        }
+
+        // 4. Auto-provisionar e-mail @ispsn.org desconhecido apenas se for de domínio institucional
         if (!$user && (strpos($fullEmail, '@ispsn.org') !== false || strpos($email, '@') === false)) {
             $prefix = explode('@', $fullEmail)[0];
             $nomePartes = explode('.', $prefix);
@@ -187,7 +215,6 @@ class Auth {
                 $stmt->execute([$fullEmail]);
                 $user = $stmt->fetch();
             } catch (\Exception $e) {
-                // Em caso de concorrência, consultar novamente
                 $stmt->execute([$fullEmail]);
                 $user = $stmt->fetch();
             }
@@ -195,6 +222,23 @@ class Auth {
 
         if ($user) {
             $userEmail = strtolower($user['email'] ?? '');
+            // Auto-resolução canónica para Direito (Fernando Macedo)
+            if ($userEmail === 'fernando.macedo@ispsn.org' || $userEmail === 'coord.direito@ispsn.org') {
+                try {
+                    $stmtDir = $db->query("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'DIRE' OR UPPER(TRIM(nome)) = 'DIREITO' LIMIT 1");
+                    $dirId = (int)$stmtDir->fetchColumn();
+                    if ($dirId) {
+                        $user['curso_id'] = $dirId;
+                        $user['perfil'] = 'coordenador';
+                        $user['activo'] = 1;
+                        if (!empty($user['id'])) {
+                            $db->prepare("UPDATE utilizadores SET curso_id = ?, perfil = 'coordenador', activo = 1 WHERE id = ?")->execute([$dirId, $user['id']]);
+                        }
+                    }
+                } catch (\Throwable $e) {}
+            }
+
+            // Auto-resolução canónica para GRH (Isata Cabaça)
             if ($userEmail === 'isata.cabaca@ispsn.org' || strpos($userEmail, 'isata.cabaca') !== false) {
                 try {
                     $stmtGrh = $db->query("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'GRH' OR UPPER(TRIM(nome)) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' ORDER BY (UPPER(TRIM(nome)) = 'GRH') DESC, id ASC LIMIT 1");
@@ -455,15 +499,36 @@ class Auth {
             $userCursoId = (int)($user['curso_id'] ?? 0);
             if ($userCursoId && $userCursoId === $cursoId) return true;
 
-            // Verificação de segurança adicional para coordenadores conhecidos (ex: Isata Cabaça -> GRH)
+            // Verificação de segurança adicional para coordenadores conhecidos por curso
             $email = strtolower($user['email'] ?? '');
-            if ($email === 'isata.cabaca@ispsn.org' || strpos($email, 'isata.cabaca') !== false) {
-                $db = Database::getInstance();
-                $stmt = $db->query("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = 'GRH' OR UPPER(TRIM(nome)) = 'GRH' OR LOWER(nome) LIKE '%recursos humanos%' ORDER BY (UPPER(TRIM(nome)) = 'GRH') DESC, id ASC LIMIT 1");
-                $grhId = (int)$stmt->fetchColumn();
-                if ($grhId === $cursoId) {
-                    $_SESSION['user']['curso_id'] = $grhId;
-                    return true;
+            $coordCursoMap = [
+                'fernando.macedo'     => 'DIRE',
+                'coord.direito'       => 'DIRE',
+                'isata.cabaca'        => 'GRH',
+                'valeriano.mangandi'  => 'CPRI',
+                'joao.miguel'         => 'ECON',
+                'nelson.sungo'        => 'CONT',
+                'dania.castro'        => 'ENFE',
+                'silvia.chitangua'    => 'CARD',
+                'domingos.bernardo'   => 'FISI',
+                'miriam.herrera'      => 'ANLI',
+                'deuladeu.ferramenta' => 'HIST',
+                'deoladeu.ferramenta' => 'HIST',
+                'jorge.montane'       => 'PSIC',
+                'sebastao.joaquim'    => 'SOCI',
+                'sebastiao.joaquim'   => 'SOCI'
+            ];
+
+            foreach ($coordCursoMap as $prefix => $codCurso) {
+                if (strpos($email, $prefix) !== false) {
+                    $db = Database::getInstance();
+                    $stmt = $db->prepare("SELECT id FROM cursos WHERE UPPER(TRIM(codigo)) = ? LIMIT 1");
+                    $stmt->execute([$codCurso]);
+                    $targetCursoId = (int)$stmt->fetchColumn();
+                    if ($targetCursoId && $targetCursoId === $cursoId) {
+                        $_SESSION['user']['curso_id'] = $targetCursoId;
+                        return true;
+                    }
                 }
             }
         }

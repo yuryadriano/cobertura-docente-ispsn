@@ -42,20 +42,27 @@ log_msg "========================================================="
 log_msg "  INÍCIO DA EXECUÇÃO DE BACKUP AUTOMÁTICO (PROTEGIDO)   "
 log_msg "========================================================="
 
-# 1. Backup da Base de Dados MySQL (com verificação rigorosa de Exit Code e Tamanho)
+# 1. Backup da Base de Dados MySQL (com tentativa inteligente de conexão e fallback SSL)
 DB_BACKUP_FILE="${BACKUP_DIR}/backup_db_${TIMESTAMP}.sql.gz"
 DB_ERR_LOG="${BACKUP_DIR}/dump_error_${TIMESTAMP}.tmp"
 log_msg "📦 A gerar dump da base de dados '${DB_NAME}'..."
 
-# Determinar a flag SSL apropriada para conexão interna inter-container
-SSL_FLAG="--ssl-mode=DISABLED"
-if mysqldump --help 2>&1 | grep -q "\-\-skip\-ssl"; then
-    SSL_FLAG="--skip-ssl"
+set +e
+# Tentativa 1: com --skip-ssl
+mysqldump --skip-ssl -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASS}" --single-transaction --quick "${DB_NAME}" 2>"${DB_ERR_LOG}" | gzip > "${DB_BACKUP_FILE}"
+DUMP_STATUS=$?
+
+# Tentativa 2: fallback para --ssl-mode=DISABLED se falhar por flag desconhecida
+if [ ${DUMP_STATUS} -ne 0 ] || [ $(wc -c < "${DB_BACKUP_FILE}" 2>/dev/null || echo 0) -le 1024 ]; then
+    mysqldump --ssl-mode=DISABLED -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASS}" --single-transaction --quick "${DB_NAME}" 2>"${DB_ERR_LOG}" | gzip > "${DB_BACKUP_FILE}"
+    DUMP_STATUS=$?
 fi
 
-set +e
-mysqldump ${SSL_FLAG} -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASS}" --single-transaction --quick "${DB_NAME}" 2>"${DB_ERR_LOG}" | gzip > "${DB_BACKUP_FILE}"
-DUMP_STATUS=$?
+# Tentativa 3: fallback para conexão direta sem flag explícita
+if [ ${DUMP_STATUS} -ne 0 ] || [ $(wc -c < "${DB_BACKUP_FILE}" 2>/dev/null || echo 0) -le 1024 ]; then
+    mysqldump -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASS}" --single-transaction --quick "${DB_NAME}" 2>"${DB_ERR_LOG}" | gzip > "${DB_BACKUP_FILE}"
+    DUMP_STATUS=$?
+fi
 set -eo pipefail
 
 if [ ${DUMP_STATUS} -eq 0 ]; then
