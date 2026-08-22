@@ -97,9 +97,18 @@ class PlanoModel {
                         ['letra' => 'Turma D', 'cod' => 'CPRI-RB-MA', 'turno' => 'Regime B'],
                         ['letra' => 'Turma E', 'cod' => 'CPRI-RB-TA', 'turno' => 'Regime B'],
                     ],
-                    2 => [['letra' => 'Turma A', 'cod' => 'CPRI2TA', 'turno' => 'Tarde']],
-                    3 => [['letra' => 'Turma A', 'cod' => 'CPRI3NTA', 'turno' => 'Noite']],
-                    4 => [['letra' => 'Turma A', 'cod' => 'CPRI4NTA', 'turno' => 'Noite']]
+                    2 => [
+                        ['letra' => 'Turma A', 'cod' => 'CPRI2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma B', 'cod' => 'CPRI-RB2', 'turno' => 'Regime B'],
+                    ],
+                    3 => [
+                        ['letra' => 'Turma A', 'cod' => 'CPRI3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'CPRI-RB3', 'turno' => 'Regime B'],
+                    ],
+                    4 => [
+                        ['letra' => 'Turma A', 'cod' => 'CPRI4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'CPRI-RB4', 'turno' => 'Regime B'],
+                    ]
                 ],
                 'SOCI' => [
                     1 => [
@@ -109,9 +118,18 @@ class PlanoModel {
                         ['letra' => 'Turma D', 'cod' => 'SOC-RB-MA', 'turno' => 'Regime B'],
                         ['letra' => 'Turma E', 'cod' => 'SOC-RB-TA', 'turno' => 'Regime B'],
                     ],
-                    2 => [['letra' => 'Turma A', 'cod' => 'SOC2TA', 'turno' => 'Tarde']],
-                    3 => [['letra' => 'Turma A', 'cod' => 'SOC3NTA', 'turno' => 'Noite']],
-                    4 => [['letra' => 'Turma A', 'cod' => 'SOC4NTA', 'turno' => 'Noite']]
+                    2 => [
+                        ['letra' => 'Turma A', 'cod' => 'SOC2TA', 'turno' => 'Tarde'],
+                        ['letra' => 'Turma B', 'cod' => 'SOC-RB2', 'turno' => 'Regime B'],
+                    ],
+                    3 => [
+                        ['letra' => 'Turma A', 'cod' => 'SOC3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'SOC-RB3', 'turno' => 'Regime B'],
+                    ],
+                    4 => [
+                        ['letra' => 'Turma A', 'cod' => 'SOC4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'SOC-RB4', 'turno' => 'Regime B'],
+                    ]
                 ],
                 'CONT' => [
                     1 => [
@@ -119,14 +137,22 @@ class PlanoModel {
                         ['letra' => 'Turma B', 'cod' => 'COF1MB', 'turno' => 'Manhã'],
                         ['letra' => 'Turma C', 'cod' => 'COF1TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma D', 'cod' => 'COF1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma E', 'cod' => 'COF-RB1', 'turno' => 'Regime B'],
                     ],
                     2 => [
                         ['letra' => 'Turma A', 'cod' => 'COF2MA', 'turno' => 'Manhã'],
                         ['letra' => 'Turma B', 'cod' => 'COF2TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma C', 'cod' => 'COF2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'COF-RB2', 'turno' => 'Regime B'],
                     ],
-                    3 => [['letra' => 'Turma A', 'cod' => 'COF3NTA', 'turno' => 'Noite']],
-                    4 => [['letra' => 'Turma A', 'cod' => 'COF4NTA', 'turno' => 'Noite']]
+                    3 => [
+                        ['letra' => 'Turma A', 'cod' => 'COF3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'COF-RB3', 'turno' => 'Regime B'],
+                    ],
+                    4 => [
+                        ['letra' => 'Turma A', 'cod' => 'COF4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'COF-RB4', 'turno' => 'Regime B'],
+                    ]
                 ],
                 'ECON' => [
                     1 => [
@@ -134,14 +160,22 @@ class PlanoModel {
                         ['letra' => 'Turma B', 'cod' => 'ECO1MB', 'turno' => 'Manhã'],
                         ['letra' => 'Turma C', 'cod' => 'ECO1TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma D', 'cod' => 'ECO1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma E', 'cod' => 'ECO-RB1', 'turno' => 'Regime B'],
                     ],
                     2 => [
                         ['letra' => 'Turma A', 'cod' => 'ECO2MA', 'turno' => 'Manhã'],
                         ['letra' => 'Turma B', 'cod' => 'ECO2TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma C', 'cod' => 'ECO2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'ECO-RB2', 'turno' => 'Regime B'],
                     ],
-                    3 => [['letra' => 'Turma A', 'cod' => 'ECO3NTA', 'turno' => 'Noite']],
-                    4 => [['letra' => 'Turma A', 'cod' => 'ECO4NTA', 'turno' => 'Noite']]
+                    3 => [
+                        ['letra' => 'Turma A', 'cod' => 'ECO3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'ECO-RB3', 'turno' => 'Regime B'],
+                    ],
+                    4 => [
+                        ['letra' => 'Turma A', 'cod' => 'ECO4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'ECO-RB4', 'turno' => 'Regime B'],
+                    ]
                 ],
                 'GRH' => [
                     1 => [
@@ -156,12 +190,17 @@ class PlanoModel {
                         ['letra' => 'Turma A', 'cod' => 'GRH2MA', 'turno' => 'Manhã'],
                         ['letra' => 'Turma B', 'cod' => 'GRH2TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma C', 'cod' => 'GRH2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'GRH-RB2', 'turno' => 'Regime B'],
                     ],
                     3 => [
                         ['letra' => 'Turma A', 'cod' => 'GRH3MA', 'turno' => 'Manhã'],
                         ['letra' => 'Turma B', 'cod' => 'GRH3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma C', 'cod' => 'GRH-RB3', 'turno' => 'Regime B'],
                     ],
-                    4 => [['letra' => 'Turma A', 'cod' => 'GRH4NTA', 'turno' => 'Noite']]
+                    4 => [
+                        ['letra' => 'Turma A', 'cod' => 'GRH4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'GRH-RB4', 'turno' => 'Regime B'],
+                    ]
                 ],
                 'HIST' => [
                     1 => [
@@ -190,16 +229,22 @@ class PlanoModel {
                         ['letra' => 'Turma A', 'cod' => 'PSIC1MA', 'turno' => 'Manhã'],
                         ['letra' => 'Turma B', 'cod' => 'PSIC1TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma C', 'cod' => 'PSIC1NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma D', 'cod' => 'PSIC-RB1', 'turno' => 'Regime B'],
                     ],
                     2 => [
                         ['letra' => 'Turma A', 'cod' => 'PSIC2TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma B', 'cod' => 'PSIC2NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma C', 'cod' => 'PSIC-RB2', 'turno' => 'Regime B'],
                     ],
                     3 => [
                         ['letra' => 'Turma A', 'cod' => 'PSIC3TA', 'turno' => 'Tarde'],
                         ['letra' => 'Turma B', 'cod' => 'PSIC3NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma C', 'cod' => 'PSIC-RB3', 'turno' => 'Regime B'],
                     ],
-                    4 => [['letra' => 'Turma A', 'cod' => 'PSIC4NTA', 'turno' => 'Noite']]
+                    4 => [
+                        ['letra' => 'Turma A', 'cod' => 'PSIC4NTA', 'turno' => 'Noite'],
+                        ['letra' => 'Turma B', 'cod' => 'PSIC-RB4', 'turno' => 'Regime B'],
+                    ]
                 ],
                 'DIRE' => [
                     1 => [
